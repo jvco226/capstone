@@ -16,7 +16,55 @@ This repo currently includes:
 
 ## Local setup
 
-1. Install dependencies:
+1. The following are all needed to run this locally - Node.js, project initialization, express, pg, dotenv, socket.io, PostgreSQL, and a .env.
 
+2. Node.js - to check if it's installed, run:
+    ```bash
+    node -v
+    ```
+    If not installed, install the latest version from https://nodejs.org
+   
+3. Project initialization - in the project folder, run the following for managing dependencies:
    ```bash
-   npm install
+   npm init -y
+   ```
+   Creates a package.json file
+   
+4. Express, pg, dotenv, and socket.io - run the following:
+   ```bash
+   npm install express pg dotenv socket.io
+   ```
+   Express is for the web servers, pg is for PostgreSQL client, dotenv is for environment variables, and socket.io is for
+   real-time WebSocket communication.
+
+5. Create a .env file in the root of the project:
+   ```bash
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=game_auth
+   DB_USER=game_app_user
+   DB_PASSWORD=game_app_password
+   DB_SSL=false
+   PORT=3000
+   ```  
+   
+7. PostgreSQL needs to be installed and a database setup must be done. Install from https://www.postgresql.org/download/
+   Create a databse with the following:
+   ```bash
+   CREATE DATABASE game_auth;
+   ```
+   Then, create a user and password. These will match with your .env:
+   ```bash
+   CREATE USER game_app_user WITH PASSWORD 'game_app_password';
+   GRANT ALL PRIVILEGES ON DATABASE game_auth TO game_app_user;
+   ```
+
+8. Run the server with:
+   ```bash
+   node server.js
+   ```
+   Now, in any broswer, open:
+   ```bash
+   http://localhost:3000
+   ```
+   
