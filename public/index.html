@@ -37,6 +37,7 @@
     <div class="w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden">
         <nav class="bg-red-700 text-white p-4 flex justify-center space-x-6">
             <button id="nav-home" class="nav-link px-4 py-1 text-xl rounded-md font-bold hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400" data-page="home-page">Home</button>
+            <button id="nav-login" class="nav-link px-4 py-1 text-xl rounded-md font-bold hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400" data-page="login-page">Login</button>
             <button id="nav-register" class="nav-link px-4 py-1 text-xl rounded-md font-bold hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400" data-page="register-page">Register</button>
         </nav>
 
@@ -48,6 +49,9 @@
         <div class="p-6 md:p-8">
             <!-- Home Page -->
             <div id="home-page" class="page-content">
+                <p id="logged-in-user" class="text-sm text-gray-600 text-center mb-2 hidden">
+                    You're logged in as <span id="username-display" class="font-semibold"></span>
+                </p>
                 <h1 class="text-6xl font-black mb-6 text-center text-red-600">Online Trivia 📚</h1>
 
                 <div class="space-y-8">
@@ -110,6 +114,30 @@
                 </form>
             </div>
 
+            <!-- Login Page -->
+            <div id="login-page" class="page-content hidden">
+                <h1 class="text-3xl font-black mb-6 text-center text-red-700">Login to Your Account</h1>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-username" class="block text-sm font-bold text-gray-700">Username</label>
+                        <input type="text" id="login-username" name="username" required
+                               class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-lg">
+                    </div>
+
+                    <div>
+                        <label for="login-password" class="block text-sm font-bold text-gray-700">Password</label>
+                        <input type="password" id="login-password" name="password" required
+
+                               class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-lg">
+
+                    </div>
+                    <button type="submit"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400">
+                        Login
+                    </button>
+                </form>
+
+            </div>
             <!-- Lobby Page -->
             <div id="lobby-page" class="page-content hidden">
                 <h1 class="text-4xl font-black mb-6 text-center text-red-600">Lobby</h1>
@@ -127,235 +155,245 @@
                     <!-- PLACEHOLDER player list -->
                     <div id="player-list" class="min-h-[100px] bg-white border border-gray-200 rounded-lg p-3 text-left mb-6">
                         <h3 class="font-bold text-gray-800 text-lg mb-2">Players (1/8)</h3>
-                        <!-- Player names will be added by JS later -->
                         <ul id="players" class="list-disc list-inside">
                             <li>Host</li>
                         </ul>
                     </div>
-                    <button id="start-game-btn"
-                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400">
-                        Start Game!
-                    </button>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="leave-lobby-btn"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400">
+                            Leave Lobby
+                        </button>
+                        <button id="start-game-btn"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400">
+                            Start Game!
+                        </button>
+                    </div>
                 </div>
+            </div>
+
 
             </div>
         </div>
     </div>
 
-    <!-- Socket.IO -->
-    <script src="/socket.io/socket.io.js"></script>
-
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Page containers
-            const pages = document.querySelectorAll('.page-content');
-            const navContainer = document.querySelector('nav');
-            
-            // Forms and Buttons
-            const registerForm = document.getElementById('register-form');
-            const createRoomBtn = document.getElementById('create-room-btn');
-            const joinForm = document.getElementById('join-form');
-            const startGameBtn = document.getElementById('start-game-btn');
+    document.addEventListener('DOMContentLoaded', () => {
+        // Page containers
+        const pages = document.querySelectorAll('.page-content');
+        const navContainer = document.querySelector('nav');
+        
+        // Forms and Buttons
+        const registerForm = document.getElementById('register-form');
+        const loginForm = document.getElementById('login-form');
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const joinForm = document.getElementById('join-form');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const leaveLobbyBtn = document.getElementById('leave-lobby-btn');
 
-            // Message Box
-            const messageBox = document.getElementById('message-box');
-            const messageText = document.getElementById('message-text');
-            const closeMessageBtn = document.getElementById('close-message');
+        // Message Box
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const closeMessageBtn = document.getElementById('close-message');
 
-            // Dynamic Content
-            const lobbyGamePin = document.getElementById('lobby-game-pin');
-            const gamePinInput = document.getElementById('game-pin')
+        // Lobby
+        const lobbyGamePin = document.getElementById('lobby-game-pin');
+        const playerListContainer = document.getElementById('player-list');
+        const playersUl = document.getElementById('players');
 
-            let messageTimeout;
+        // Input
+        const gamePinInput = document.getElementById('game-pin');
 
-            // Utility Functions
+        // Globals
+        let messageTimeout;
+        let username = null;
+        let players = [];
 
-            function showPage(pageId) {
-                pages.forEach(page => {
-                    page.classList.add('hidden');
-                });
-                const activePage = document.getElementById(pageId);
-                if (activePage) {
-                    activePage.classList.remove('hidden');
-                }
-                hideMessage(); 
+        // --- Utility Functions ---
+        function showPage(pageId) {
+            pages.forEach(page => page.classList.add('hidden'));
+            const activePage = document.getElementById(pageId);
+            if (activePage) activePage.classList.remove('hidden');
+            hideMessage();
+        }
+
+        const loggedInUser = document.getElementById('logged-in-user');
+        const usernameDisplay = document.getElementById('username-display');
+
+        function updateLoggedInDisplay() {
+            if (username) {
+                usernameDisplay.textContent = username;
+                loggedInUser.classList.remove('hidden');
+            } else {
+                loggedInUser.classList.add('hidden');
             }
+        }
 
-            function showMessage(message, type = 'info') {
-                if (messageTimeout) {
-                    clearTimeout(messageTimeout);
-                }
 
-                messageText.textContent = message;
-                messageBox.classList.remove('hidden', 'bg-green-600', 'bg-red-500', 'text-white');
-                
-                if (type === 'success') {
-                    messageBox.classList.add('bg-green-600', 'text-white');
-                } else if (type === 'error') {
-                    messageBox.classList.add('bg-red-500', 'text-white');
-                } else { // info
-                    messageBox.classList.add('bg-green-600', 'text-white');
-                }
+        function showMessage(message, type = 'info') {
+            if (messageTimeout) clearTimeout(messageTimeout);
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-green-600', 'bg-red-500', 'text-white');
 
-                messageTimeout = setTimeout(hideMessage, 5000);
-            }
+            if (type === 'success') messageBox.classList.add('bg-green-600', 'text-white');
+            else if (type === 'error') messageBox.classList.add('bg-red-500', 'text-white');
+            else messageBox.classList.add('bg-green-600', 'text-white');
 
-            function hideMessage() {
-                if (messageTimeout) {
-                    clearTimeout(messageTimeout);
-                }
-                messageBox.classList.add('hidden');
-            }
+            messageTimeout = setTimeout(hideMessage, 5000);
+        }
 
-            gamePinInput.addEventListener('input', (e) => {
-                // Don't allow non-numeral input
-                e.target.value = e.target.value.replace(/\D/g, '');
+        function hideMessage() {
+            if (messageTimeout) clearTimeout(messageTimeout);
+            messageBox.classList.add('hidden');
+        }
+
+        // Update the player list UI
+        function updatePlayerList() {
+            playersUl.innerHTML = '';
+            players.forEach(p => {
+                const li = document.createElement('li');
+                li.textContent = p;
+                playersUl.appendChild(li);
             });
+            const countText = `Players (${players.length}/8)`;
+            playerListContainer.querySelector('h3').textContent = countText;
+        }
 
-            // Event Listeners
-
-            // Top Navigation (Home and Register)
-            navContainer.addEventListener('click', (e) => {
-                const link = e.target.closest('.nav-link'); 
-                
-                if (link) {
-                    const pageId = link.getAttribute('data-page');
-                    if (pageId) {
-                        showPage(pageId);
-                    }
-                }
-            });
-
-            closeMessageBtn.addEventListener('click', hideMessage);
-
-            
-            registerForm.addEventListener('submit', async (e) => {
-                e.preventDefault(); 
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-
-                if (!username || !password) {
-                    showMessage('Username and password are required.', 'error');
-                    return;
-                }
-
-                showMessage('Registering...', 'info');
-
-                try {
-                    const response = await fetch('/api/register', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password }),
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        showMessage('Registration successful!', 'success');
-                        registerForm.reset();
-                        showPage('home-page'); // Go back home after registering
-                    } else {
-                        showMessage(data.error || 'Registration failed.', 'error');
-                    }
-                } catch (error) {
-                    console.error('Registration Error:', error);
-                    showMessage('An error occurred. Please try again.', 'error');
-                }
-            });
-
-            // --- Socket.IO integration ---
-
-            const socket = io();
-
-            function connectToWebSocket(code, playerName) {
-                socket.emit('joinRoom', { code, playerName });
-
-                // Listen for updates from server
-                socket.on('updatePlayers', (players) => {
-                    const playersList = document.getElementById('players');
-                    const playerCountHeader = document.querySelector('#player-list h3');
-
-                    // Clear current list
-                    playersList.innerHTML = '';
-
-                    // Add each player
-                    players.forEach(p => {
-                        const li = document.createElement('li');
-                        li.textContent = p.name;
-                        playersList.appendChild(li);
-                    });
-
-                    // Update player count
-                    if (playerCountHeader) {
-                        playerCountHeader.textContent = `Players (${players.length}/8)`;
-                    }
-                });
-            }
-
-            createRoomBtn.addEventListener('click', async () => {
-                showMessage('Hosting new game...', 'info');
-
-                try {
-                    const response = await fetch('/api/create-room', { method: 'POST' });
-                    const data = await response.json();
-
-                    if (response.ok && data.code) {
-                        if (lobbyGamePin) lobbyGamePin.textContent = data.code;
-                        showMessage(`Game ${data.code} created!`, 'success');
-                        showPage('lobby-page');
-
-                        connectToWebSocket(data.code, 'Host');
-                    } else {
-                        showMessage(data.error || 'Failed to create game.', 'error');
-                    }
-                } catch (error) {
-                    console.error('Host Game Error:', error);
-                    showMessage('An error occurred. Please try again.', 'error');
-                }
-            });
-
-            joinForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const pin = gamePinInput.value;
-
-                if (!/^\d{6}$/.test(pin)) {
-                    showMessage('PIN must be 6 digits.', 'error');
-                    return;
-                }
-
-                showMessage(`Checking game ${pin}...`, 'info');
-
-                try {
-                    const response = await fetch('/api/join-room', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ code: pin, playerName: 'Guest' }),
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        showMessage(data.error || 'Could not join room.', 'error');
-                    } else {
-                        if (lobbyGamePin) lobbyGamePin.textContent = pin;
-                        showPage('lobby-page');
-                        showMessage('Room found!', 'success');
-
-                        connectToWebSocket(pin, 'Guest');
-                    }
-                } catch (error) {
-                    console.error('Join Game Error:', error);
-                    showMessage('An error occurred. Please try again.', 'error');
-                }
-            });
-
-            startGameBtn.addEventListener('click', () => {
-                showMessage('Starting game!', 'info');
-                console.log('Start game button clicked.');
-            });
-
-            showPage('home-page');
+        // --- Event Listeners ---
+        gamePinInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '');
         });
+
+        navContainer.addEventListener('click', (e) => {
+            const link = e.target.closest('.nav-link');
+            if (link) {
+                const pageId = link.getAttribute('data-page');
+                if (pageId) showPage(pageId);
+            }
+        });
+
+        closeMessageBtn.addEventListener('click', hideMessage);
+
+        // Registration
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const regUser = document.getElementById('username').value;
+            const regPass = document.getElementById('password').value;
+            if (!regUser || !regPass) return showMessage('Username and password are required.', 'error');
+            showMessage('Registering...', 'info');
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: regUser, password: regPass }),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage('Registration successful!', 'success');
+                    registerForm.reset();
+                    showPage('home-page');
+                } else showMessage(data.error || 'Registration failed.', 'error');
+            } catch {
+                showMessage('An error occurred. Please try again.', 'error');
+            }
+        });
+
+        // Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const loginUser = document.getElementById('login-username').value;
+            const loginPass = document.getElementById('login-password').value;
+            if (!loginUser || !loginPass) return showMessage('Username and password are required.', 'error');
+            showMessage('Logging in...', 'info');
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: loginUser, password: loginPass }),
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    username = loginUser;
+                    showMessage(`Welcome back, ${username}!`, 'success');
+                    updateLoggedInDisplay();
+                    loginForm.reset();
+                    showPage('home-page');
+                } else showMessage(data.error || 'Login failed. Check credentials.', 'error');
+            } catch {
+                showMessage('An error occurred. Please try again.', 'error');
+            }
+        });
+
+        // Create Room (Host)
+        createRoomBtn.addEventListener('click', async () => {
+            showMessage('Hosting new game...', 'info');
+            try {
+                const response = await fetch('/api/create-room', { method: 'POST' });
+                const data = await response.json();
+
+                if (response.ok && data.code) {
+                    lobbyGamePin.textContent = data.code;
+                    players = [username || 'Host'];
+                    updatePlayerList();
+                    showMessage(`Game ${data.code} created!`, 'success');
+                    showPage('lobby-page');
+                } else showMessage(data.error || 'Failed to create game.', 'error');
+            } catch {
+                showMessage('An error occurred. Please try again.', 'error');
+            }
+        });
+
+        // Join Room
+        joinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pin = gamePinInput.value.trim();
+            if (!/^\d{6}$/.test(pin)) return showMessage('PIN must be 6 digits.', 'error');
+            showMessage(`Checking game ${pin}...`, 'info');
+
+            try {
+                const response = await fetch('/api/join-room', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: pin, playerName: username || 'Guest' }),
+                });
+                const data = await response.json();
+
+                if (!response.ok) showMessage(data.error || 'Could not join room.', 'error');
+                else {
+                    lobbyGamePin.textContent = pin;
+                    showPage('lobby-page');
+                    showMessage('Room found!', 'success');
+
+                    // Add current player to the lobby
+                    players = ['Host', username || 'Guest'];
+                    updatePlayerList();
+                }
+            } catch {
+                showMessage('An error occurred. Please try again.', 'error');
+            }
+        });
+
+        // Leave Lobby
+        leaveLobbyBtn.addEventListener('click', () => {
+            players = [];
+            updatePlayerList();
+            showPage('home-page');
+            showMessage('You left the lobby.', 'success');
+        });
+
+        // Start Game
+        startGameBtn.addEventListener('click', () => {
+            showMessage('Starting game!', 'info');
+            console.log('Start game button clicked.');
+        });
+
+        // Initial view
+        showPage('home-page');
+    });
     </script>
+
 </body>
 </html>
