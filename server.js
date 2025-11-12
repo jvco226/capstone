@@ -14,11 +14,11 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'game_auth',
-  user: process.env.DB_USER || 'game_app_user',
-  password: process.env.DB_PASSWORD || 'game_app_password',
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || 'game_auth',
+    user: process.env.DB_USER || 'game_app_user',
+    password: process.env.DB_PASSWORD || 'game_app_password',
 });
 
 
@@ -83,9 +83,21 @@ io.on('connection', (socket) => {
         for (const code in rooms) {
             const room = rooms[code];
             const index = room.players.findIndex(p => p.id === socket.id);
+
             if (index !== -1) {
+                // Remove the player
                 room.players.splice(index, 1);
+
+                // Update all remaining clients in the room
                 io.to(code).emit('updatePlayers', room.players);
+
+                // If no players left, delete the room entirely
+                if (room.players.length === 0) {
+                    delete rooms[code];
+                    console.log(`Room ${code} closed (no players remaining)`);
+                }
+
+            break; // stop once we’ve found and removed the player
             }
         }
     });
@@ -100,6 +112,42 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
+
+// Login existing users
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    try {
+        // Find user in database
+        const result = await pool.query(
+            'SELECT id, username, password_hash FROM users WHERE username = $1',
+        [username]
+    );
+
+    if (result.rows.length === 0) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const user = result.rows[0];
+
+    // Compare password with stored hash
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // Success
+    res.json({ ok: true, user: { id: user.id, username: user.username } });
+    } catch (err) {
+        console.error('Database error on login:', err);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 
 // Register new users
 app.post('/api/register', async (req, res) => {

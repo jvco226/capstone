@@ -177,12 +177,18 @@
         </div>
     </div>
 
+    <!-- Socket.IO client -->
+    <script src="/socket.io/socket.io.js"></script>
+
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // create socket after socket.io script is loaded
+        let socket = io();
+
         // Page containers
         const pages = document.querySelectorAll('.page-content');
         const navContainer = document.querySelector('nav');
-        
+
         // Forms and Buttons
         const registerForm = document.getElementById('register-form');
         const loginForm = document.getElementById('login-form');
@@ -229,16 +235,13 @@
             }
         }
 
-
         function showMessage(message, type = 'info') {
             if (messageTimeout) clearTimeout(messageTimeout);
             messageText.textContent = message;
             messageBox.classList.remove('hidden', 'bg-green-600', 'bg-red-500', 'text-white');
-
             if (type === 'success') messageBox.classList.add('bg-green-600', 'text-white');
             else if (type === 'error') messageBox.classList.add('bg-red-500', 'text-white');
             else messageBox.classList.add('bg-green-600', 'text-white');
-
             messageTimeout = setTimeout(hideMessage, 5000);
         }
 
@@ -247,7 +250,6 @@
             messageBox.classList.add('hidden');
         }
 
-        // Update the player list UI
         function updatePlayerList() {
             playersUl.innerHTML = '';
             players.forEach(p => {
@@ -333,13 +335,11 @@
             try {
                 const response = await fetch('/api/create-room', { method: 'POST' });
                 const data = await response.json();
-
                 if (response.ok && data.code) {
                     lobbyGamePin.textContent = data.code;
-                    players = [username || 'Host'];
-                    updatePlayerList();
-                    showMessage(`Game ${data.code} created!`, 'success');
                     showPage('lobby-page');
+                    socket.emit('joinRoom', { code: data.code, playerName: username || 'Host' });
+                    showMessage(`Game ${data.code} created!`, 'success');
                 } else showMessage(data.error || 'Failed to create game.', 'error');
             } catch {
                 showMessage('An error occurred. Please try again.', 'error');
@@ -361,23 +361,27 @@
                 });
                 const data = await response.json();
 
-                if (!response.ok) showMessage(data.error || 'Could not join room.', 'error');
-                else {
-                    lobbyGamePin.textContent = pin;
-                    showPage('lobby-page');
-                    showMessage('Room found!', 'success');
+                if (!response.ok) return showMessage(data.error || 'Could not join room.', 'error');
 
-                    // Add current player to the lobby
-                    players = ['Host', username || 'Guest'];
-                    updatePlayerList();
-                }
+                lobbyGamePin.textContent = pin;
+                showPage('lobby-page');
+                showMessage('Room found!', 'success');
+
+                socket.emit('joinRoom', { code: pin, playerName: username || 'Guest' });
             } catch {
                 showMessage('An error occurred. Please try again.', 'error');
             }
         });
 
+        // Listen for server broadcasts of the player list
+        socket.on('updatePlayers', (playerList) => {
+            players = playerList.map(p => p.name);
+            updatePlayerList();
+        });
+
         // Leave Lobby
         leaveLobbyBtn.addEventListener('click', () => {
+            socket.disconnect();
             players = [];
             updatePlayerList();
             showPage('home-page');
@@ -393,7 +397,4 @@
         // Initial view
         showPage('home-page');
     });
-    </script>
-
-</body>
-</html>
+</script>
