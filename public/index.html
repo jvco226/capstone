@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Trivia</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font 'Sniglet' -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sniglet&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sniglet', sans-serif;
+        }
+        #message-box {
+            transition: all 0.3s ease-in-out;
+        }
+        /* Pin input style */
+        #game-pin::placeholder {
+            color: #9ca3af;
+            text-transform: none;
+        }
+        #game-pin:focus::placeholder {
+            color: transparent;
+        }
+        /* Displayed pin style */
+        #lobby-game-pin {
+            font-size: 4rem;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+<body class="bg-red-900 text-gray-800 h-full flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden">
+        <nav class="bg-red-700 text-white p-4 flex justify-center space-x-6">
+            <button id="nav-home" class="nav-link px-4 py-1 text-xl rounded-md font-bold hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400" data-page="home-page">Home</button>
+            <button id="nav-register" class="nav-link px-4 py-1 text-xl rounded-md font-bold hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400" data-page="register-page">Register</button>
+        </nav>
+
+        <div id="message-box" class="hidden p-4 m-4 rounded-lg relative font-semibold text-center">
+            <span id="message-text"></span>
+            <button id="close-message" class="absolute top-1 right-3 text-lg font-bold">&times;</button>
+        </div>
+
+        <div class="p-6 md:p-8">
+            <!-- Home Page -->
+            <div id="home-page" class="page-content">
+                <h1 class="text-6xl font-black mb-6 text-center text-red-600">Online Trivia 📚</h1>
+
+                <div class="space-y-8">
+                    <!-- Host a Game -->
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold mb-3 text-gray-700">Host a Game!</h2>
+                        <button id="create-room-btn"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            New Room
+                        </button>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="flex items-center">
+                        <div class="flex-grow border-t border-gray-300"></div>
+                        <span class="flex-shrink mx-4 text-gray-500">OR</span>
+                        <div class="flex-grow border-t border-gray-300"></div>
+                    </div>
+
+                    <!-- Join a Game -->
+                    <div>
+                        <h2 class="text-2xl font-bold mb-3 text-gray-700 text-center">Join a Game!</h2>
+                        <form id="join-form" class="space-y-4" novalidate>
+                            <div>
+                                <label for="game-pin" class="block text-sm font-bold text-gray-700 sr-only">Game PIN</label>
+                                <input type="text" id="game-pin" name="game-pin" required
+                                       maxlength="6"
+                                       pattern="\d{6}"
+                                       inputmode="numeric"
+                                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center text-3xl font-black tracking-widest uppercase"
+                                       placeholder="ENTER PIN">
+                            </div>
+                            <button type="submit"
+                                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400">
+                                Join Room
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Register Page -->
+            <div id="register-page" class="page-content hidden">
+                <h1 class="text-3xl font-black mb-6 text-center text-red-700">Create Your Account</h1>
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label for="username" class="block text-sm font-bold text-gray-700">Username</label>
+                        <input type="text" id="username" name="username" required
+                               class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-lg">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-bold text-gray-700">Password</label>
+                        <input type="password" id="password" name="password" required
+                               class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-lg">
+                    </div>
+                    <button type="submit"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400">
+                        Register
+                    </button>
+                </form>
+            </div>
+
+            <!-- Lobby Page -->
+            <div id="lobby-page" class="page-content hidden">
+                <h1 class="text-4xl font-black mb-6 text-center text-red-600">Lobby</h1>
+                
+                <div class="text-center p-6 bg-gray-50 rounded-lg">
+                    <h2 class="text-2xl font-bold text-gray-700">Share this PIN with your friends.</h2>
+                    
+                    <!-- Display PIN -->
+                    <div class="my-4">
+                        <span id="lobby-game-pin" class="font-black text-red-600">...</span>
+                    </div>
+
+                    <p class="text-lg text-gray-600 mb-6">Waiting for players to join...</p>
+
+                    <!-- PLACEHOLDER player list -->
+                    <div id="player-list" class="min-h-[100px] bg-white border border-gray-200 rounded-lg p-3 text-left mb-6">
+                        <h3 class="font-bold text-gray-800 text-lg mb-2">Players (1/8)</h3>
+                        <!-- Player names will be added by JS later -->
+                        <ul id="players" class="list-disc list-inside">
+                            <li>Host</li>
+                        </ul>
+                    </div>
+                    <button id="start-game-btn"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400">
+                        Start Game!
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Page containers
+            const pages = document.querySelectorAll('.page-content');
+            const navContainer = document.querySelector('nav');
+            
+            // Forms and Buttons
+            const registerForm = document.getElementById('register-form');
+            const createRoomBtn = document.getElementById('create-room-btn');
+            const joinForm = document.getElementById('join-form');
+            const startGameBtn = document.getElementById('start-game-btn');
+
+            // Message Box
+            const messageBox = document.getElementById('message-box');
+            const messageText = document.getElementById('message-text');
+            const closeMessageBtn = document.getElementById('close-message');
+
+            // Dynamic Content
+            const lobbyGamePin = document.getElementById('lobby-game-pin');
+            const gamePinInput = document.getElementById('game-pin')
+
+            let messageTimeout;
+
+            // Utility Functions
+
+            function showPage(pageId) {
+                pages.forEach(page => {
+                    page.classList.add('hidden');
+                });
+                const activePage = document.getElementById(pageId);
+                if (activePage) {
+                    activePage.classList.remove('hidden');
+                }
+                hideMessage(); 
+            }
+
+            function showMessage(message, type = 'info') {
+                if (messageTimeout) {
+                    clearTimeout(messageTimeout);
+                }
+
+                messageText.textContent = message;
+                messageBox.classList.remove('hidden', 'bg-green-600', 'bg-red-500', 'text-white');
+                
+                if (type === 'success') {
+                    messageBox.classList.add('bg-green-600', 'text-white');
+                } else if (type === 'error') {
+                    messageBox.classList.add('bg-red-500', 'text-white');
+                } else { // info
+                    messageBox.classList.add('bg-green-600', 'text-white');
+                }
+
+                messageTimeout = setTimeout(hideMessage, 5000);
+            }
+
+            function hideMessage() {
+                if (messageTimeout) {
+                    clearTimeout(messageTimeout);
+                }
+                messageBox.classList.add('hidden');
+            }
+
+            gamePinInput.addEventListener('input', (e) => {
+                // Don't allow non-numeral input
+                e.target.value = e.target.value.replace(/\D/g, '');
+            });
+
+            // Event Listeners
+
+            // Top Navigation (Home and Register)
+            navContainer.addEventListener('click', (e) => {
+                const link = e.target.closest('.nav-link'); 
+                
+                if (link) {
+                    const pageId = link.getAttribute('data-page');
+                    if (pageId) {
+                        showPage(pageId);
+                    }
+                }
+            });
+
+            closeMessageBtn.addEventListener('click', hideMessage);
+
+            
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault(); 
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                if (!username || !password) {
+                    showMessage('Username and password are required.', 'error');
+                    return;
+                }
+
+                showMessage('Registering...', 'info');
+
+                try {
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password }),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showMessage('Registration successful!', 'success');
+                        registerForm.reset();
+                        showPage('home-page'); // Go back home after registering
+                    } else {
+                        showMessage(data.error || 'Registration failed.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Registration Error:', error);
+                    showMessage('An error occurred. Please try again.', 'error');
+                }
+            });
+
+            // --- Socket.IO integration ---
+
+            const socket = io();
+
+            function connectToWebSocket(code, playerName) {
+                socket.emit('joinRoom', { code, playerName });
+
+                socket.on('updatePlayers', (players) => {
+                    const playersList = document.getElementById('players');
+                    playersList.innerHTML = '';
+                    players.forEach(p => {
+                        const li = document.createElement('li');
+                        li.textContent = p.name;
+                        playersList.appendChild(li);
+                    });
+                });
+            }
+
+            createRoomBtn.addEventListener('click', async () => {
+                showMessage('Hosting new game...', 'info');
+
+                try {
+                    const response = await fetch('/api/create-room', { method: 'POST' });
+                    const data = await response.json();
+
+                    if (response.ok && data.code) {
+                        if (lobbyGamePin) lobbyGamePin.textContent = data.code;
+                        showMessage(`Game ${data.code} created!`, 'success');
+                        showPage('lobby-page');
+
+                        connectToWebSocket(data.code, 'Host');
+                    } else {
+                        showMessage(data.error || 'Failed to create game.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Host Game Error:', error);
+                    showMessage('An error occurred. Please try again.', 'error');
+                }
+            });
+
+            joinForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const pin = gamePinInput.value;
+
+                if (!/^\d{6}$/.test(pin)) {
+                    showMessage('PIN must be 6 digits.', 'error');
+                    return;
+                }
+
+                showMessage(`Checking game ${pin}...`, 'info');
+
+                try {
+                    const response = await fetch('/api/join-room', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: pin, playerName: 'Guest' }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        showMessage(data.error || 'Could not join room.', 'error');
+                    } else {
+                        if (lobbyGamePin) lobbyGamePin.textContent = pin;
+                        showPage('lobby-page');
+                        showMessage('Room found!', 'success');
+
+                        connectToWebSocket(pin, 'Guest');
+                    }
+                } catch (error) {
+                    console.error('Join Game Error:', error);
+                    showMessage('An error occurred. Please try again.', 'error');
+                }
+            });
+
+            startGameBtn.addEventListener('click', () => {
+                showMessage('Starting game!', 'info');
+                console.log('Start game button clicked.');
+            });
+
+            showPage('home-page');
+        });
+    </script>
+</body>
+</html>
