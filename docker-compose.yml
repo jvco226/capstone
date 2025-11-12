@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16
+    container_name: capstone_trivia_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin_user
+      POSTGRES_PASSWORD: admin_password
+      POSTGRES_DB: game_auth
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
