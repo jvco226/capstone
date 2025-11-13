@@ -87,6 +87,26 @@ io.on('connection', (socket) => {
         socket.emit('joinSuccess', { code, players: rooms[code].players });
     });
 
+    socket.on('leaveRoom', (code) => {
+        const room = rooms[code];
+        if (room) {
+            const index = room.players.findIndex(p => p.id === socket.id);
+            
+            if (index !== -1) {
+                room.players.splice(index, 1);
+                
+                socket.leave(code);
+
+                io.to(code).emit('updatePlayers', room.players);
+
+                if (room.players.length === 0) {
+                    delete rooms[code];
+                    console.log(`Room ${code} closed (empty).`);
+                }
+            }
+        }
+    });
+    
     socket.on('disconnect', () => {
         // Remove player from any room they were in
         for (const code in rooms) {
