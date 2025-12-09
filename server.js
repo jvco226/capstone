@@ -105,7 +105,12 @@ io.on('connection', (socket) => {
         io.to(code).emit('updatePlayers', rooms[code].players);
 
         // Confirm join to client
-        socket.emit('joinSuccess', { code, players: rooms[code].players });
+        socket.emit('joinSuccess', { 
+            code, 
+            players: rooms[code].players, 
+            isPublic: rooms[code].isPublic || false 
+        });
+
     });
 
     socket.on('leaveRoom', (code) => {
