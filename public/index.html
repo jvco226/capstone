@@ -90,6 +90,15 @@
                             </button>
                         </form>
                     </div>
+
+                    <!-- Join Public Game -->
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold mb-3 text-gray-700">Join a Public Game!</h2>
+                        <button id="join-public-btn"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-400">
+                            Join Public Game
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -174,7 +183,7 @@
                             Leave Lobby
                         </button>
                         <button id="start-game-btn"
-                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 disabled:bg-gray-400 disabled:cursor-not-allowed hidden"
                                 disabled>
                             Start Game!
                         </button>
@@ -276,7 +285,6 @@
         const playersUl = document.getElementById('players');
         const readyBtn = document.getElementById('ready-btn');
         const readySection = document.getElementById('ready-section');
-        const startGameBtn = document.getElementById('start-game-btn');
         const startGameStatus = document.getElementById('start-game-status');
         let isReady = false;
         let isHost = false;
@@ -328,33 +336,41 @@
         function updatePlayerList(playerList = null) {
             const listToUse = playerList || players;
             playersUl.innerHTML = '';
-            listToUse.forEach((p, index) => {
+            listToUse.forEach((p) => {
                 const li = document.createElement('li');
                 const playerName = typeof p === 'string' ? p : p.name;
-                const isPlayerReady = typeof p === 'object' && p.ready;
-                const isPlayerHost = index === 0;
+                const isPlayerReady = typeof p === 'object' && p.ready === true;
+                const isPlayerHost = typeof p === 'object' && p.isHost === true;
                 
                 li.className = 'flex items-center justify-between';
+                
+                let playerDisplayName = playerName;
+                if (isPlayerHost) {
+                    playerDisplayName = `${playerName} <span class="text-purple-600 font-bold">(host)</span>`;
+                }
+                
+                let statusHtml = '';
+                if (!isPlayerHost && isPlayerReady) {
+                    statusHtml = '<span class="text-green-600 font-bold">✓ Ready</span>';
+                } else if (!isPlayerHost && !isPlayerReady) {
+                    statusHtml = '<span class="text-gray-400">Not ready</span>';
+                }
+                
                 li.innerHTML = `
-                    <span>${playerName}${isPlayerHost ? ' (Host)' : ''}</span>
-                    ${isPlayerReady ? '<span class="text-green-600 font-bold">✓ Ready</span>' : '<span class="text-gray-400">Not ready</span>'}
+                    <span>${playerDisplayName}</span>
+                    ${statusHtml}
                 `;
                 playersUl.appendChild(li);
             });
             const countText = `Players (${listToUse.length}/8)`;
             playerListContainer.querySelector('h3').textContent = countText;
             
-            // Update ready button state
+            // Update ready button and start button states
             if (listToUse.length > 0 && typeof listToUse[0] === 'object') {
-                // Find current player by checking socket.id or by name if socket.id not available
-                const currentPlayer = listToUse.find(p => {
-                    if (p.id) return p.id === socket.id;
-                    // Fallback: check by name if we're not the host
-                    return !isHost && p.name === (username || 'Guest');
-                });
+                const currentPlayer = listToUse.find(p => p.id === socket.id);
                 
-                if (currentPlayer && !isHost) {
-                    isReady = currentPlayer.ready || false;
+                if (currentPlayer && !currentPlayer.isHost) {
+                    isReady = currentPlayer.ready === true;
                     readyBtn.textContent = isReady ? 'Not Ready' : 'Ready';
                     readyBtn.className = isReady 
                         ? 'w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400'
@@ -363,11 +379,11 @@
                 
                 // Update start button state (only for host)
                 if (isHost) {
-                    const nonHostPlayers = listToUse.slice(1);
-                    const allReady = nonHostPlayers.length === 0 || nonHostPlayers.every(p => p.ready);
+                    const nonHostPlayers = listToUse.filter(p => !p.isHost);
+                    const allReady = nonHostPlayers.length === 0 || nonHostPlayers.every(p => p.ready === true);
                     startGameBtn.disabled = !allReady;
                     if (nonHostPlayers.length > 0) {
-                        const readyCount = nonHostPlayers.filter(p => p.ready).length;
+                        const readyCount = nonHostPlayers.filter(p => p.ready === true).length;
                         startGameStatus.textContent = allReady 
                             ? 'All players ready!' 
                             : `Waiting for ${nonHostPlayers.length - readyCount} player(s) to be ready...`;
@@ -466,7 +482,7 @@
             }
         });
 
-        // Join Room
+        // Join Private Room
         joinForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const pin = gamePinInput.value.trim();
@@ -493,24 +509,48 @@
             });
 
         });
+        
+        const joinPublicBtn = document.getElementById('join-public-btn');
+
+        joinPublicBtn.addEventListener('click', async () => {
+            showMessage('Finding or creating a public lobby...', 'info');
+
+            try {
+                const response = await fetch('/api/join-public-room', { method: 'POST' });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showMessage(data.error || 'Failed to join public game.', 'error');
+                    return;
+                }
+
+                const publicRoomCode = data.roomCode;
+               currentRoomCode = publicRoomCode;
+
+                // Join the room via Socket.IO
+                socket.emit('joinRoom', { code: publicRoomCode, playerName: username || 'Guest', isPublic: true });
+
+            } catch {
+                showMessage('An error occurred. Please try again.', 'error');
+            }
+        });
+
 
         // Listen for server confirmation
         socket.on('joinSuccess', ({ code, players: serverPlayers }) => {
             currentRoomCode = code;
             lobbyGamePin.textContent = code;
             
-            // Check if this player is the host (first player or by socket.id)
-            isHost = serverPlayers.length > 0 && (
-                (serverPlayers[0].id && serverPlayers[0].id === socket.id) || 
-                (!serverPlayers[0].id && serverPlayers.indexOf(serverPlayers.find(p => p.id === socket.id)) === 0) ||
-                (serverPlayers[0].name === (username || 'Host') && serverPlayers.length === 1)
-            );
+            // Check if this player is the host using the server's isHost flag
+            isHost = serverPlayers.some(p => p.id === socket.id && p.isHost === true);
             
             // Show/hide ready button based on host status
             if (isHost) {
                 readySection.classList.add('hidden');
+                startGameBtn.classList.remove('hidden');
             } else {
                 readySection.classList.remove('hidden');
+                startGameBtn.classList.add('hidden');
             }
             
             updatePlayerList(serverPlayers);
@@ -518,25 +558,18 @@
             showMessage('Room joined!', 'success');
         });
 
-        // Listen for join errors
-        socket.on('joinError', (message) => {
-            showMessage(message, 'error');
-        })
-
         // Listen for server broadcasts of the player list
         socket.on('updatePlayers', (playerList) => {
-            // Check if this player is the host (first player or by socket.id)
-            if (playerList.length > 0) {
-                const firstPlayer = playerList[0];
-                isHost = (firstPlayer.id && firstPlayer.id === socket.id) || 
-                         (playerList.find(p => p.id === socket.id) && playerList.indexOf(playerList.find(p => p.id === socket.id)) === 0);
-            }
+            // Check if this player is the host using the server's isHost flag
+            isHost = playerList.some(p => p.id === socket.id && p.isHost === true);
             
             // Show/hide ready button based on host status
             if (isHost) {
                 readySection.classList.add('hidden');
+                startGameBtn.classList.remove('hidden');
             } else {
                 readySection.classList.remove('hidden');
+                startGameBtn.classList.add('hidden');
             }
             
             updatePlayerList(playerList);
