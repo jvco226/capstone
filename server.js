@@ -85,7 +85,7 @@ app.post('/api/join-public-room', (req, res) => {
     // Find an existing public lobby with space
     for (const code in rooms) {
         const room = rooms[code];
-        if (room.type === 'public' && room.players.length < 8) { // same max as private
+        if (room.type === 'public' && room.gameState === 'lobby' && room.players.length < 8) {
             publicRoomCode = code;
             break;
         }
@@ -94,7 +94,17 @@ app.post('/api/join-public-room', (req, res) => {
     // If none exists, create a new public room
     if (!publicRoomCode) {
         publicRoomCode = generateRoomCode();
-        rooms[publicRoomCode] = { players: [], type: 'public' };
+        rooms[publicRoomCode] = { 
+            players: [],
+            gameState: 'lobby',
+            currentQuestion: null,
+            questionIndex: 0,
+            answers: {},
+            questions: [],
+            scores: {},
+            readyPlayers: new Set(),
+            type: 'public'
+        };
     }
 
     res.json({ roomCode: publicRoomCode });
@@ -103,26 +113,7 @@ app.post('/api/join-public-room', (req, res) => {
 
 // Socket.IO connection
 io.on('connection', (socket) => {
-    socket.on('joinRoom', ({ code, playerName }) => {
-        socket.on('joinRoom', ({ code, playerName, isPublic }) => {
-            if (!rooms[code]) {
-                rooms[code] = {
-                    players: [],
-                    type: isPublic ? 'public' : 'private'
-                };
-            }
-
-            rooms[code].players.push({
-                id: socket.id,
-                name: playerName,
-                ready: false
-            });
-
-            socket.join(code);
-
-            io.to(code).emit('updatePlayers', rooms[code].players);
-        });
-
+    socket.on('joinRoom', ({ code, playerName, isPublic }) => {
         if (!rooms[code]) {
             rooms[code] = { 
                 players: [],
@@ -132,8 +123,17 @@ io.on('connection', (socket) => {
                 answers: {},
                 questions: [],
                 scores: {},
-                readyPlayers: new Set()
+                readyPlayers: new Set(),
+                type: isPublic ? 'public' : 'private'
             };
+        }
+
+        // Ensure readyPlayers is always initialized
+        if (!rooms[code].readyPlayers) {
+            rooms[code].readyPlayers = new Set();
+        }
+        if (!rooms[code].scores) {
+            rooms[code].scores = {};
         }
 
         // Check if room is full
@@ -145,18 +145,17 @@ io.on('connection', (socket) => {
         // Avoid duplicates
         if (!rooms[code].players.find(p => p.id === socket.id)) {
             rooms[code].players.push({ id: socket.id, name: playerName, score: 0, ready: false });
-            // Initialize score for this player
-            if (!rooms[code].scores) rooms[code].scores = {};
             rooms[code].scores[socket.id] = 0;
-            if (!rooms[code].readyPlayers) rooms[code].readyPlayers = new Set();
         }
 
         socket.join(code);
 
         // Broadcast updated players list to all clients in the room
-        const playersWithReady = rooms[code].players.map(p => ({
+        const isHost = rooms[code].players[0].id === socket.id;
+        const playersWithReady = rooms[code].players.map((p, index) => ({
             ...p,
-            ready: rooms[code].readyPlayers.has(p.id)
+            ready: index === 0 ? null : rooms[code].readyPlayers.has(p.id),
+            isHost: index === 0
         }));
         io.to(code).emit('updatePlayers', playersWithReady);
 
@@ -179,9 +178,10 @@ io.on('connection', (socket) => {
                     room.readyPlayers.delete(socket.id);
                 }
 
-                const playersWithReady = room.players.map(p => ({
+                const playersWithReady = room.players.map((p, idx) => ({
                     ...p,
-                    ready: room.readyPlayers.has(p.id)
+                    ready: idx === 0 ? null : room.readyPlayers.has(p.id),
+                    isHost: idx === 0
                 }));
                 io.to(code).emit('updatePlayers', playersWithReady);
 
@@ -209,9 +209,10 @@ io.on('connection', (socket) => {
                 }
 
                 // Update all remaining clients in the room
-                const playersWithReady = room.players.map(p => ({
+                const playersWithReady = room.players.map((p, idx) => ({
                     ...p,
-                    ready: room.readyPlayers.has(p.id)
+                    ready: idx === 0 ? null : room.readyPlayers.has(p.id),
+                    isHost: idx === 0
                 }));
                 io.to(code).emit('updatePlayers', playersWithReady);
 
@@ -221,7 +222,7 @@ io.on('connection', (socket) => {
                     console.log(`Room ${code} closed (no players remaining)`);
                 }
 
-            break; // stop once we've found and removed the player
+                break;
             }
         }
     });
@@ -236,20 +237,25 @@ io.on('connection', (socket) => {
         const player = room.players.find(p => p.id === socket.id);
         if (!player) return;
 
+        // Host cannot toggle ready
+        const isHost = room.players[0].id === socket.id;
+        if (isHost) {
+            return;
+        }
+
         if (!room.readyPlayers) room.readyPlayers = new Set();
 
         if (room.readyPlayers.has(socket.id)) {
             room.readyPlayers.delete(socket.id);
-            player.ready = false;
         } else {
             room.readyPlayers.add(socket.id);
-            player.ready = true;
         }
 
-        // Broadcast updated players list
-        const playersWithReady = room.players.map(p => ({
+        // Broadcast updated players list with isHost flag
+        const playersWithReady = room.players.map((p, index) => ({
             ...p,
-            ready: room.readyPlayers.has(p.id)
+            ready: index === 0 ? null : room.readyPlayers.has(p.id),
+            isHost: index === 0
         }));
         io.to(code).emit('updatePlayers', playersWithReady);
     });
