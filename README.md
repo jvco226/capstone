@@ -22,36 +22,27 @@ This repo currently includes:
   - ✅ Scoring system
   - ✅ Question database with 15 sample questions
   - ✅ Real-time multiplayer gameplay via Socket.IO
+  - ✅ Public lobbies
 
 ## Local setup
 
-1. The following are all needed to run this locally - Node.js, project initialization, express, pg, dotenv, socket.io, PostgreSQL, and a .env.
+1. **Prerequisites:** Ensure you have the following installed:
+   - Node.js
+   - PostgreSQL (or Docker Desktop)
+   - A terminal
 
-2. Node.js - to check if it's installed, run:
+2. **Node.js** - to check if it's installed, run:
     ```bash
     node -v
     ```
     If not installed, install the latest version from https://nodejs.org
    
-3. Project initialization - in the project folder, run the following for managing dependencies:
-   ```bash
-   npm init -y
-   ```
-   Creates a package.json file
-   
-4. Install dependencies - run the following:
+3. **Install dependencies** - In the project folder, run the following command to install the required packages listed in package.json:
    ```bash
    npm install
    ```
-   This will install: express, pg, dotenv, socket.io, bcrypt, body-parser, cors
-   - Express is for the web servers
-   - pg is for PostgreSQL client
-   - dotenv is for environment variables
-   - socket.io is for real-time WebSocket communication
-   - bcrypt is for password hashing
-   - body-parser is for parsing request bodies
 
-5. Create a .env file in the root of the project:
+4. Create a .env file in the root of the project:
    ```bash
    DB_HOST=localhost
    DB_PORT=5432
@@ -62,8 +53,12 @@ This repo currently includes:
    PORT=3000
    ```  
    
-7. PostgreSQL needs to be installed and a database setup must be done. Install from https://www.postgresql.org/download/
-   Create a database with the following:
+5. **PostgreSQL** needs to be installed and a database setup must be done. Install from https://www.postgresql.org/download/
+   Open your terminal and enter the PostgreSQL shell
+   ```bash
+   psql postgres
+   ```
+   Once inside the postgres=# shell, create a database:
    ```bash
    CREATE DATABASE game_auth;
    ```
@@ -72,22 +67,29 @@ This repo currently includes:
    CREATE USER game_app_user WITH PASSWORD 'game_app_password';
    GRANT ALL PRIVILEGES ON DATABASE game_auth TO game_app_user;
    ```
-   
-   Then run the SQL initialization script to create tables and sample questions:
+   **Exit the Shell** Type the following to leave the PostgreSQL interface:
+   ```bash
+   \q
+   ```
+   Run the SQL initialization script to create tables and sample questions:
    ```bash
    psql -U game_app_user -d game_auth -f sql/init.sql
    ```
-   Or if using Docker:
+   **Alternatively**: if using docker, simply run:
    ```bash
    docker-compose up -d
    # Then connect and run the SQL file
    ```
-
-8. Run the server with:
+   **Verify Database Connection (Optional):** To ensure your .env file is correct and the database is reachable, run the verification script:
    ```bash
-   node server.js
+   npm run verify-db
    ```
-   Now, in any broswer, open:
+
+8. **Run the server:**
+   ```bash
+   npm start
+   ```
+   Now, in any broswer, navigate to:
    ```bash
    http://localhost:3000
    ```
