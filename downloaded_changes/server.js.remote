@@ -26,14 +26,7 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// ============================================================================
-// BETA 2 ADDITIONS - Game Functionality
-// ============================================================================
-// The following sections were added in Beta 2 to implement complete game functionality
-// Original code from Beta 1 remains below, with enhancements clearly marked
-
-// Trivia Questions Database (BETA 2 - NEW)
-// 50 questions across multiple categories, 5 randomly selected per game
+// Trivia Questions Database
 const questions = [
     // Geography
     {
@@ -288,9 +281,7 @@ const questions = [
     }
 ];
 
-// In-memory rooms data (BETA 2 - ENHANCED from Beta 1)
-// Beta 1: Simple structure with just players array
-// Beta 2: Enhanced with game state, host tracking, scoring, and question management
+// In-memory rooms data
 // { roomCode: { 
 //     players: [{id, name, ready, score, isHost}], 
 //     hostId: socketId,
@@ -312,7 +303,6 @@ function generateRoomCode() {
 
 // API to create a new room
 app.post('/api/create-room', (req, res) => {
-    const { isPublic = false } = req.body;
     let code = generateRoomCode();
     while (rooms[code]) {
         code = generateRoomCode(); // avoid duplicates
@@ -324,30 +314,11 @@ app.post('/api/create-room', (req, res) => {
         state: 'lobby',
         currentQuestion: -1,
         questionStartTime: null,
-        answers: {},
-        isPublic: isPublic || false
+        answers: {}
     };
     res.json({ ok: true, code });
 
-    console.log(`Room ${code} created (${isPublic ? 'public' : 'private'}).`);
-});
-
-// API to get list of available public rooms
-app.get('/api/public-rooms', (req, res) => {
-    try {
-        const publicRooms = Object.entries(rooms)
-            .filter(([code, room]) => room && room.isPublic && room.state === 'lobby')
-            .map(([code, room]) => ({
-                code: code,
-                playerCount: room.players ? room.players.filter(p => p.ready && p.name).length : 0
-            }))
-            .filter(room => room.playerCount < 8); // Only show rooms with space
-        
-        res.json({ ok: true, rooms: publicRooms || [] });
-    } catch (error) {
-        console.error('Error fetching public rooms:', error);
-        res.json({ ok: true, rooms: [] });
-    }
+    console.log(`Room ${code} created.`);
 });
 
 // API to join a room (optional for initial fetch)
@@ -361,11 +332,6 @@ app.post('/api/join-room', (req, res) => {
 
 // Socket.IO connection
 io.on('connection', (socket) => {
-    // ========================================================================
-    // BETA 2 - Enhanced joinRoom handler
-    // Original Beta 1: Accepted playerName parameter and added player directly
-    // Beta 2: Removed playerName, added pending/ready system, host tracking, state validation
-    // ========================================================================
     socket.on('joinRoom', ({ code }) => {
         if (!rooms[code]) {
             rooms[code] = { 
@@ -374,8 +340,7 @@ io.on('connection', (socket) => {
                 state: 'lobby',
                 currentQuestion: -1,
                 questionStartTime: null,
-                answers: {},
-                isPublic: false // Default to private room
+                answers: {}
             };
         }
 
@@ -422,15 +387,10 @@ io.on('connection', (socket) => {
             code, 
             players: room.players,
             isHost: room.players.find(p => p.id === socket.id)?.isHost || false,
-            state: room.state,
-            isPublic: room.isPublic || false
+            state: room.state
         });
     });
 
-    // ========================================================================
-    // BETA 2 - NEW: setName handler
-    // Allows players to set their name after joining room (pending -> ready)
-    // ========================================================================
     socket.on('setName', ({ code, playerName }) => {
         const room = rooms[code];
         if (!room) {
@@ -453,10 +413,6 @@ io.on('connection', (socket) => {
         socket.emit('setNameSuccess', { playerName });
     });
 
-    // ========================================================================
-    // BETA 2 - NEW: startGame handler
-    // Host-only functionality to start the trivia game
-    // ========================================================================
     socket.on('startGame', ({ code }) => {
         const room = rooms[code];
         if (!room) {
@@ -476,10 +432,10 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Validate minimum players and all ready
+        // Validate minimum players and all ready (allow 1 player for testing)
         const readyPlayers = room.players.filter(p => p.ready && p.name);
-        if (readyPlayers.length < 2) {
-            socket.emit('startGameError', 'Need at least 2 players to start.');
+        if (readyPlayers.length < 1) {
+            socket.emit('startGameError', 'Need at least 1 player to start.');
             return;
         }
 
@@ -508,10 +464,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // ========================================================================
-    // BETA 2 - NEW: submitAnswer handler
-    // Handles player answer submission with scoring based on correctness and speed
-    // ========================================================================
     socket.on('submitAnswer', ({ code, answerIndex }) => {
         const room = rooms[code];
         if (!room) {
@@ -565,9 +517,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ========================================================================
-    // BETA 2 - NEW: Helper functions for game flow
-    // ========================================================================
     function nextQuestion(room, code) {
         room.currentQuestion++;
         
@@ -601,10 +550,6 @@ io.on('connection', (socket) => {
         io.to(code).emit('gameEnded', { leaderboard });
     }
 
-    // ========================================================================
-    // BETA 2 - NEW: returnToLobby handler
-    // Host-only functionality to reset game and return to lobby
-    // ========================================================================
     socket.on('returnToLobby', ({ code }) => {
         const room = rooms[code];
         if (!room) {
@@ -627,13 +572,7 @@ io.on('connection', (socket) => {
 
         io.to(code).emit('returnedToLobby');
     });
-    // ========================================================================
-    // END BETA 2 NEW HANDLERS
-    // ========================================================================
-    
-    // ========================================================================
-    // BETA 1 CODE - Enhanced in Beta 2 with host reassignment
-    // ========================================================================
+
     socket.on('leaveRoom', (code) => {
         const room = rooms[code];
         if (room) {
@@ -661,7 +600,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // BETA 1 CODE - Enhanced in Beta 2 with host reassignment
     socket.on('disconnect', () => {
         // Remove player from any room they were in
         for (const code in rooms) {

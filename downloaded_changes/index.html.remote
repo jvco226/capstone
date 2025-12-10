@@ -58,18 +58,10 @@
                     <!-- Host a Game -->
                     <div class="text-center">
                         <h2 class="text-2xl font-bold mb-3 text-gray-700">Host a Game!</h2>
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-center space-x-3">
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="checkbox" id="public-room-toggle" class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                    <span class="ml-2 text-sm font-semibold text-gray-700">Make this a public room</span>
-                                </label>
-                            </div>
-                            <button id="create-room-btn"
-                                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                New Room
-                            </button>
-                        </div>
+                        <button id="create-room-btn"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            New Room
+                        </button>
                     </div>
 
                     <!-- Divider -->
@@ -82,25 +74,6 @@
                     <!-- Join a Game -->
                     <div>
                         <h2 class="text-2xl font-bold mb-3 text-gray-700 text-center">Join a Game!</h2>
-                        
-                        <!-- Public Games Section -->
-                        <div class="mb-4">
-                            <button id="refresh-public-btn" 
-                                    class="w-full mb-3 flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100">
-                                🔄 Refresh Public Games
-                            </button>
-                            <div id="public-games-list" class="mb-4 min-h-[50px] max-h-[200px] overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white">
-                                <p class="text-sm text-gray-500 text-center py-4">Click refresh to see available public games</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Divider -->
-                        <div class="flex items-center my-4">
-                            <div class="flex-grow border-t border-gray-300"></div>
-                            <span class="flex-shrink mx-4 text-gray-500 text-sm">OR JOIN WITH PIN</span>
-                            <div class="flex-grow border-t border-gray-300"></div>
-                        </div>
-                        
                         <form id="join-form" class="space-y-4" novalidate>
                             <div>
                                 <label for="game-pin" class="block text-sm font-bold text-gray-700 sr-only">Game PIN</label>
@@ -170,17 +143,11 @@
                 <h1 class="text-4xl font-black mb-6 text-center text-red-600">Lobby</h1>
                 
                 <div class="text-center p-6 bg-gray-50 rounded-lg">
-                    <!-- Room Type Badge -->
-                    <div id="room-type-badge" class="mb-4">
-                        <span id="room-type-text" class="inline-block px-4 py-2 rounded-full text-sm font-bold"></span>
-                    </div>
+                    <h2 class="text-2xl font-bold text-gray-700">Share this PIN with your friends.</h2>
                     
-                    <!-- Share PIN container -->
-                    <div id="share-pin-container" class="my-4">
-                        <h2 class="text-2xl font-bold text-gray-700">Share this PIN with your friends.</h2>
-                        <div class="my-4">
-                            <span id="lobby-game-pin" class="font-black text-red-600">...</span>
-                        </div>
+                    <!-- Display PIN -->
+                    <div class="my-4">
+                        <span id="lobby-game-pin" class="font-black text-red-600">...</span>
                     </div>
 
                     <!-- Name Input Section (shown when player is pending) -->
@@ -300,12 +267,9 @@
         const registerForm = document.getElementById('register-form');
         const loginForm = document.getElementById('login-form');
         const createRoomBtn = document.getElementById('create-room-btn');
-        const publicRoomToggle = document.getElementById('public-room-toggle');
         const joinForm = document.getElementById('join-form');
         const startGameBtn = document.getElementById('start-game-btn');
         const leaveLobbyBtn = document.getElementById('leave-lobby-btn');
-        const refreshPublicBtn = document.getElementById('refresh-public-btn');
-        const publicGamesList = document.getElementById('public-games-list');
 
         // Message Box
         const messageBox = document.getElementById('message-box');
@@ -435,11 +399,11 @@
             if (startGameBtn) {
                 if (isHost && isPlayerReady) {
                     startGameBtn.style.display = '';
-                    // Check if enough players
+                    // Check if enough players (allow 1 for testing)
                     const readyCount = parseInt(readyCountSpan.textContent) || 0;
-                    startGameBtn.disabled = readyCount < 2;
-                    if (readyCount < 2) {
-                        startGameBtn.title = 'Need at least 2 players to start';
+                    startGameBtn.disabled = readyCount < 1;
+                    if (readyCount < 1) {
+                        startGameBtn.title = 'Need at least 1 player to start';
                     } else {
                         startGameBtn.title = '';
                     }
@@ -519,14 +483,9 @@
 
         // Create Room (Host)
         createRoomBtn.addEventListener('click', async () => {
-            const isPublic = publicRoomToggle ? publicRoomToggle.checked : false;
             showMessage('Hosting new game...', 'info');
             try {
-                const response = await fetch('/api/create-room', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ isPublic: isPublic })
-                });
+                const response = await fetch('/api/create-room', { method: 'POST' });
                 const data = await response.json();
                 if (response.ok && data.code) {
                     lobbyGamePin.textContent = data.code;
@@ -539,66 +498,6 @@
                 showMessage('An error occurred. Please try again.', 'error');
             }
         });
-
-        // Refresh Public Games
-        refreshPublicBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/public-rooms');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch public rooms');
-                }
-                const data = await response.json();
-                if (data.rooms && data.rooms.length > 0) {
-                    displayPublicGames(data.rooms);
-                } else {
-                    publicGamesList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No public games available at the moment</p>';
-                }
-            } catch (error) {
-                console.error('Error loading public games:', error);
-                publicGamesList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No public games available at the moment</p>';
-            }
-        });
-
-        function displayPublicGames(publicRooms) {
-            if (!publicRooms || publicRooms.length === 0) {
-                publicGamesList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No public games available at the moment</p>';
-                return;
-            }
-
-            publicGamesList.innerHTML = '';
-            publicRooms.forEach(room => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center justify-between p-2 mb-2 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer';
-                div.innerHTML = `
-                    <div class="flex-1">
-                        <span class="font-semibold text-gray-800">Public Game</span>
-                        <span class="text-sm text-gray-500 ml-2">(${room.playerCount}/8 players)</span>
-                    </div>
-                    <button class="join-public-btn px-3 py-1 bg-blue-500 text-white text-sm font-semibold rounded hover:bg-blue-600" data-code="${room.code}">
-                        Join
-                    </button>
-                `;
-                
-                const joinBtn = div.querySelector('.join-public-btn');
-                joinBtn.addEventListener('click', () => {
-                    const code = joinBtn.getAttribute('data-code');
-                    joinPublicRoom(code);
-                });
-                
-                publicGamesList.appendChild(div);
-            });
-        }
-
-        function joinPublicRoom(code) {
-            showMessage(`Joining public game...`, 'info');
-            isPlayerReady = false;
-            socket.emit('joinRoom', { code: code });
-        }
-
-        // Load public games on page load
-        if (refreshPublicBtn) {
-            refreshPublicBtn.click();
-        }
 
         // Join Room
         joinForm.addEventListener('submit', async (e) => {
@@ -626,8 +525,9 @@
         });
 
         // Listen for server confirmation
-        socket.on('joinSuccess', ({ code, players: serverPlayers, isHost: hostStatus, state, isPublic }) => {
+        socket.on('joinSuccess', ({ code, players: serverPlayers, isHost: hostStatus, state }) => {
             currentRoomCode = code;
+            lobbyGamePin.textContent = code;
             currentPlayerName = null; // Reset when joining new room
             isPlayerReady = false;
             isHost = hostStatus || false;
@@ -636,33 +536,6 @@
             
             updatePlayerList(serverPlayers);
             updateStartButtonVisibility();
-            
-            // Handle public vs private lobby display
-            const sharePinContainer = document.getElementById('share-pin-container');
-            const roomTypeText = document.getElementById('room-type-text');
-            const roomTypeBadge = document.getElementById('room-type-badge');
-            
-            if (isPublic) {
-                // Public room - show badge and hide PIN
-                if (roomTypeText) {
-                    roomTypeText.textContent = '🌐 Public Room';
-                    roomTypeText.className = 'inline-block px-4 py-2 rounded-full text-sm font-bold bg-blue-100 text-blue-800 border-2 border-blue-300';
-                }
-                lobbyGamePin.textContent = 'Public Game';
-                if (sharePinContainer) {
-                    sharePinContainer.style.display = 'none';
-                }
-            } else {
-                // Private room - show badge and PIN
-                if (roomTypeText) {
-                    roomTypeText.textContent = '🔒 Private Room';
-                    roomTypeText.className = 'inline-block px-4 py-2 rounded-full text-sm font-bold bg-purple-100 text-purple-800 border-2 border-purple-300';
-                }
-                lobbyGamePin.textContent = code;
-                if (sharePinContainer) {
-                    sharePinContainer.style.display = 'block';
-                }
-            }
             
             // If game is already in progress, show game page
             if (state === 'playing') {
@@ -744,8 +617,8 @@
             }
             
             const readyCount = parseInt(readyCountSpan.textContent) || 0;
-            if (readyCount < 2) {
-                showMessage('Need at least 2 players to start.', 'error');
+            if (readyCount < 1) {
+                showMessage('Need at least 1 player to start.', 'error');
                 return;
             }
             
