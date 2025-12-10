@@ -78,9 +78,51 @@ app.post('/api/join-room', (req, res) => {
     res.json({ ok: true, code });
 });
 
+// Public lobby API
+app.post('/api/join-public-room', (req, res) => {
+    let publicRoomCode = null;
+
+    // Find an existing public lobby with space
+    for (const code in rooms) {
+        const room = rooms[code];
+        if (room.type === 'public' && room.players.length < 8) { // same max as private
+            publicRoomCode = code;
+            break;
+        }
+    }
+
+    // If none exists, create a new public room
+    if (!publicRoomCode) {
+        publicRoomCode = generateRoomCode();
+        rooms[publicRoomCode] = { players: [], type: 'public' };
+    }
+
+    res.json({ roomCode: publicRoomCode });
+});
+
+
 // Socket.IO connection
 io.on('connection', (socket) => {
     socket.on('joinRoom', ({ code, playerName }) => {
+        socket.on('joinRoom', ({ code, playerName, isPublic }) => {
+            if (!rooms[code]) {
+                rooms[code] = {
+                    players: [],
+                    type: isPublic ? 'public' : 'private'
+                };
+            }
+
+            rooms[code].players.push({
+                id: socket.id,
+                name: playerName,
+                ready: false
+            });
+
+            socket.join(code);
+
+            io.to(code).emit('updatePlayers', rooms[code].players);
+        });
+
         if (!rooms[code]) {
             rooms[code] = { 
                 players: [],
