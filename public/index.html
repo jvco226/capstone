@@ -150,92 +150,98 @@
                         <span id="lobby-game-pin" class="font-black text-red-600">...</span>
                     </div>
 
+                    <!-- Name Input Section (shown when player is pending) -->
+                    <div id="name-input-section" class="mb-6 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3">Choose Your Name</h3>
+                        <form id="set-name-form" class="space-y-3">
+                            <input type="text" id="player-name-input" name="player-name" required
+                                   maxlength="20"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-lg"
+                                   placeholder="Enter your name">
+                            <button type="submit"
+                                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-base font-bold uppercase tracking-wider text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400">
+                                Ready!
+                            </button>
+                        </form>
+                    </div>
+
                     <p class="text-lg text-gray-600 mb-6">Waiting for players to join...</p>
 
                     <!-- Player list -->
                     <div id="player-list" class="min-h-[100px] bg-white border border-gray-200 rounded-lg p-3 text-left mb-6">
-                        <h3 class="font-bold text-gray-800 text-lg mb-2">Players (1/8)</h3>
+                        <h3 class="font-bold text-gray-800 text-lg mb-2">Players (<span id="ready-count">0</span>/8)</h3>
                         <ul id="players" class="list-disc list-inside">
-                            <li>Host</li>
+                            <!-- Players will be added here -->
                         </ul>
+                        <div id="pending-players" class="mt-2 text-gray-500 text-sm">
+                            <!-- Pending players will be shown here -->
+                        </div>
                     </div>
-                    
-                    <!-- Ready Button (for non-host players) -->
-                    <div id="ready-section" class="mb-4 hidden">
-                        <button id="ready-btn"
-                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400">
-                            Ready
-                        </button>
-                    </div>
-                    
                     <div class="grid grid-cols-2 gap-4">
                         <button id="leave-lobby-btn"
                                 class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400">
                             Leave Lobby
                         </button>
                         <button id="start-game-btn"
-                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                disabled>
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 disabled:opacity-50 disabled:cursor-not-allowed">
                             Start Game!
                         </button>
                     </div>
-                    <p id="start-game-status" class="text-sm text-gray-600 text-center mt-2"></p>
                 </div>
             </div>
 
-            <!-- Game Page (Question Display) -->
+            <!-- Game Page -->
             <div id="game-page" class="page-content hidden">
-                <div class="text-center">
+                <h1 class="text-4xl font-black mb-6 text-center text-red-600">Trivia Game</h1>
+                
+                <div class="text-center p-6 bg-gray-50 rounded-lg">
                     <div class="mb-4">
-                        <span class="text-lg font-bold text-gray-600">
-                            Question <span id="question-number">1</span> of <span id="total-questions">10</span>
-                        </span>
+                        <span class="text-lg font-bold text-gray-700">Question <span id="question-number">1</span> of <span id="total-questions">5</span></span>
                     </div>
-                    <h1 class="text-3xl font-black mb-6 text-red-600" id="question-text">Loading question...</h1>
-                    
-                    <div class="space-y-4 mt-8">
-                        <button id="answer-a" class="answer-btn w-full py-4 px-6 text-left border-2 border-gray-300 rounded-lg shadow-sm text-lg font-bold bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500" data-answer="A">
-                            <span class="font-black text-blue-600 mr-3">A:</span>
-                            <span id="option-a">Option A</span>
-                        </button>
-                        <button id="answer-b" class="answer-btn w-full py-4 px-6 text-left border-2 border-gray-300 rounded-lg shadow-sm text-lg font-bold bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500" data-answer="B">
-                            <span class="font-black text-blue-600 mr-3">B:</span>
-                            <span id="option-b">Option B</span>
-                        </button>
-                        <button id="answer-c" class="answer-btn w-full py-4 px-6 text-left border-2 border-gray-300 rounded-lg shadow-sm text-lg font-bold bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500" data-answer="C">
-                            <span class="font-black text-blue-600 mr-3">C:</span>
-                            <span id="option-c">Option C</span>
-                        </button>
-                        <button id="answer-d" class="answer-btn w-full py-4 px-6 text-left border-2 border-gray-300 rounded-lg shadow-sm text-lg font-bold bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500" data-answer="D">
-                            <span class="font-black text-blue-600 mr-3">D:</span>
-                            <span id="option-d">Option D</span>
-                        </button>
+
+                    <div id="question-container" class="mb-6">
+                        <h2 id="question-text" class="text-2xl font-bold text-gray-800 mb-6">Loading question...</h2>
+                        
+                        <div id="options-container" class="space-y-3">
+                            <!-- Options will be added here -->
+                        </div>
                     </div>
-                    <p id="answer-status" class="mt-4 text-gray-600 font-semibold"></p>
+
+                    <div id="answer-feedback" class="hidden mb-4 p-4 rounded-lg">
+                        <p id="feedback-text" class="text-lg font-bold"></p>
+                        <p id="points-earned" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+
+                    <div id="waiting-message" class="hidden text-gray-600 italic">
+                        Waiting for other players...
+                    </div>
+
+                    <div id="score-display" class="mt-4 text-sm text-gray-600">
+                        Your Score: <span id="current-score" class="font-bold">0</span>
+                    </div>
                 </div>
             </div>
 
             <!-- Results Page -->
             <div id="results-page" class="page-content hidden">
-                <div class="text-center">
-                    <h1 class="text-4xl font-black mb-6 text-red-600">Results</h1>
-                    <div id="results-content" class="space-y-4">
-                        <!-- Results will be populated here -->
+                <h1 class="text-4xl font-black mb-6 text-center text-red-600">Game Over!</h1>
+                
+                <div class="text-center p-6 bg-gray-50 rounded-lg">
+                    <h2 class="text-2xl font-bold text-gray-700 mb-6">Final Leaderboard</h2>
+                    
+                    <div id="leaderboard" class="mb-6">
+                        <!-- Leaderboard will be added here -->
                     </div>
-                    <p class="mt-6 text-gray-600">Next question starting soon...</p>
-                </div>
-            </div>
 
-            <!-- End Game Page -->
-            <div id="end-game-page" class="page-content hidden">
-                <div class="text-center">
-                    <h1 class="text-5xl font-black mb-6 text-red-600">Game Over! 🎉</h1>
-                    <h2 class="text-2xl font-bold mb-8 text-gray-700">Final Scores</h2>
-                    <div id="final-scores" class="space-y-3 mb-8">
-                        <!-- Final scores will be populated here -->
+                    <div id="host-controls" class="hidden">
+                        <button id="play-again-btn"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400 mb-3">
+                            Play Again
+                        </button>
                     </div>
+
                     <button id="back-to-home-btn"
-                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400">
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400">
                         Back to Home
                     </button>
                 </div>
@@ -274,12 +280,11 @@
         const lobbyGamePin = document.getElementById('lobby-game-pin');
         const playerListContainer = document.getElementById('player-list');
         const playersUl = document.getElementById('players');
-        const readyBtn = document.getElementById('ready-btn');
-        const readySection = document.getElementById('ready-section');
-        const startGameBtn = document.getElementById('start-game-btn');
-        const startGameStatus = document.getElementById('start-game-status');
-        let isReady = false;
-        let isHost = false;
+        const pendingPlayersDiv = document.getElementById('pending-players');
+        const readyCountSpan = document.getElementById('ready-count');
+        const nameInputSection = document.getElementById('name-input-section');
+        const setNameForm = document.getElementById('set-name-form');
+        const playerNameInput = document.getElementById('player-name-input');
 
         // Input
         const gamePinInput = document.getElementById('game-pin');
@@ -289,6 +294,11 @@
         let username = null;
         let players = [];
         let currentRoomCode = null;
+        let currentPlayerName = null;
+        let isPlayerReady = false;
+        let isHost = false;
+        let currentScore = 0;
+        let hasAnswered = false;
 
         // --- Utility Functions ---
         function showPage(pageId) {
@@ -325,55 +335,80 @@
             messageBox.classList.add('hidden');
         }
 
-        function updatePlayerList(playerList = null) {
-            const listToUse = playerList || players;
+        function updatePlayerList(serverPlayers) {
+            if (!serverPlayers) return;
+            
             playersUl.innerHTML = '';
-            listToUse.forEach((p, index) => {
+            pendingPlayersDiv.innerHTML = '';
+            
+            const readyPlayers = serverPlayers.filter(p => p.ready && p.name);
+            const pendingPlayers = serverPlayers.filter(p => !p.ready || !p.name);
+            
+            // Update ready count
+            readyCountSpan.textContent = readyPlayers.length;
+            
+            // Display ready players with scores if in game
+            readyPlayers.forEach(p => {
                 const li = document.createElement('li');
-                const playerName = typeof p === 'string' ? p : p.name;
-                const isPlayerReady = typeof p === 'object' && p.ready;
-                const isPlayerHost = index === 0;
-                
-                li.className = 'flex items-center justify-between';
-                li.innerHTML = `
-                    <span>${playerName}${isPlayerHost ? ' (Host)' : ''}</span>
-                    ${isPlayerReady ? '<span class="text-green-600 font-bold">✓ Ready</span>' : '<span class="text-gray-400">Not ready</span>'}
-                `;
+                li.textContent = p.name + (p.score !== undefined ? ` (${p.score} pts)` : '');
+                li.classList.add('text-gray-800');
+                if (p.isHost) {
+                    li.textContent += ' 👑';
+                }
                 playersUl.appendChild(li);
             });
-            const countText = `Players (${listToUse.length}/8)`;
-            playerListContainer.querySelector('h3').textContent = countText;
             
-            // Update ready button state
-            if (listToUse.length > 0 && typeof listToUse[0] === 'object') {
-                // Find current player by checking socket.id or by name if socket.id not available
-                const currentPlayer = listToUse.find(p => {
-                    if (p.id) return p.id === socket.id;
-                    // Fallback: check by name if we're not the host
-                    return !isHost && p.name === (username || 'Guest');
-                });
-                
-                if (currentPlayer && !isHost) {
-                    isReady = currentPlayer.ready || false;
-                    readyBtn.textContent = isReady ? 'Not Ready' : 'Ready';
-                    readyBtn.className = isReady 
-                        ? 'w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400'
-                        : 'w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400';
-                }
-                
-                // Update start button state (only for host)
-                if (isHost) {
-                    const nonHostPlayers = listToUse.slice(1);
-                    const allReady = nonHostPlayers.length === 0 || nonHostPlayers.every(p => p.ready);
-                    startGameBtn.disabled = !allReady;
-                    if (nonHostPlayers.length > 0) {
-                        const readyCount = nonHostPlayers.filter(p => p.ready).length;
-                        startGameStatus.textContent = allReady 
-                            ? 'All players ready!' 
-                            : `Waiting for ${nonHostPlayers.length - readyCount} player(s) to be ready...`;
-                    } else {
-                        startGameStatus.textContent = '';
+            // Display pending players count
+            if (pendingPlayers.length > 0) {
+                const pendingText = document.createElement('div');
+                pendingText.textContent = `${pendingPlayers.length} player(s) choosing name...`;
+                pendingText.classList.add('text-gray-500', 'italic');
+                pendingPlayersDiv.appendChild(pendingText);
+            }
+            
+            // Check if current player is ready by checking if their name is in ready players
+            if (currentPlayerName) {
+                isPlayerReady = readyPlayers.some(p => p.name === currentPlayerName);
+            } else {
+                isPlayerReady = false;
+            }
+            
+            // Update host status
+            const currentPlayer = serverPlayers.find(p => p.name === currentPlayerName);
+            if (currentPlayer) {
+                isHost = currentPlayer.isHost || false;
+            }
+            
+            updateStartButtonVisibility();
+            
+            // Show/hide name input section
+            if (nameInputSection) {
+                if (isPlayerReady) {
+                    nameInputSection.classList.add('hidden');
+                } else {
+                    nameInputSection.classList.remove('hidden');
+                    // Pre-fill with username if logged in and not already set
+                    if (username && playerNameInput && !playerNameInput.value && !currentPlayerName) {
+                        playerNameInput.value = username;
                     }
+                }
+            }
+        }
+
+        function updateStartButtonVisibility() {
+            if (startGameBtn) {
+                if (isHost && isPlayerReady) {
+                    startGameBtn.style.display = '';
+                    // Check if enough players (allow 1 for testing)
+                    const readyCount = parseInt(readyCountSpan.textContent) || 0;
+                    startGameBtn.disabled = readyCount < 1;
+                    if (readyCount < 1) {
+                        startGameBtn.title = 'Need at least 1 player to start';
+                    } else {
+                        startGameBtn.title = '';
+                    }
+                } else {
+                    startGameBtn.style.display = 'none';
                 }
             }
         }
@@ -454,11 +489,9 @@
                 const data = await response.json();
                 if (response.ok && data.code) {
                     lobbyGamePin.textContent = data.code;
-                    currentRoomCode = data.code;
-                    isHost = true; // Creator is always the host
-                    readySection.classList.add('hidden'); // Hide ready button for host
                     showPage('lobby-page');
-                    socket.emit('joinRoom', { code: data.code, playerName: username || 'Host' });
+                    isPlayerReady = false;
+                    socket.emit('joinRoom', { code: data.code });
                     showMessage(`Game ${data.code} created!`, 'success');
                 } else showMessage(data.error || 'Failed to create game.', 'error');
             } catch {
@@ -470,6 +503,7 @@
         joinForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const pin = gamePinInput.value.trim();
+            
             if (!/^\d{6}$/.test(pin)) return showMessage('PIN must be 6 digits.', 'error');
             showMessage(`Checking game ${pin}...`, 'info');
 
@@ -477,45 +511,43 @@
                 const response = await fetch('/api/join-room', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: pin, playerName: username || 'Guest' }),
+                    body: JSON.stringify({ code: pin }),
                 });
                 const data = await response.json();
 
                 if (!response.ok) return showMessage(data.error || 'Could not join room.', 'error');
 
-                socket.emit('joinRoom', { code: pin, playerName: username || 'Guest' });
+                isPlayerReady = false;
+                socket.emit('joinRoom', { code: pin });
             } catch {
                 showMessage('An error occurred. Please try again.', 'error');
             }
-
-            socket.on('joinError', (msg) => {
-                showMessage(msg, 'error');
-            });
-
         });
 
         // Listen for server confirmation
-        socket.on('joinSuccess', ({ code, players: serverPlayers }) => {
+        socket.on('joinSuccess', ({ code, players: serverPlayers, isHost: hostStatus, state }) => {
             currentRoomCode = code;
             lobbyGamePin.textContent = code;
-            
-            // Check if this player is the host (first player or by socket.id)
-            isHost = serverPlayers.length > 0 && (
-                (serverPlayers[0].id && serverPlayers[0].id === socket.id) || 
-                (!serverPlayers[0].id && serverPlayers.indexOf(serverPlayers.find(p => p.id === socket.id)) === 0) ||
-                (serverPlayers[0].name === (username || 'Host') && serverPlayers.length === 1)
-            );
-            
-            // Show/hide ready button based on host status
-            if (isHost) {
-                readySection.classList.add('hidden');
-            } else {
-                readySection.classList.remove('hidden');
-            }
+            currentPlayerName = null; // Reset when joining new room
+            isPlayerReady = false;
+            isHost = hostStatus || false;
+            currentScore = 0;
+            hasAnswered = false;
             
             updatePlayerList(serverPlayers);
-            showPage('lobby-page');
-            showMessage('Room joined!', 'success');
+            updateStartButtonVisibility();
+            
+            // If game is already in progress, show game page
+            if (state === 'playing') {
+                showPage('game-page');
+                showMessage('Game is in progress. You can watch but cannot join.', 'info');
+            } else if (state === 'results') {
+                showPage('results-page');
+                showMessage('Game has ended. Waiting for host to start new game.', 'info');
+            } else {
+                showPage('lobby-page');
+                showMessage('Room joined! Choose your name to get ready.', 'success');
+            }
         });
 
         // Listen for join errors
@@ -525,27 +557,41 @@
 
         // Listen for server broadcasts of the player list
         socket.on('updatePlayers', (playerList) => {
-            // Check if this player is the host (first player or by socket.id)
-            if (playerList.length > 0) {
-                const firstPlayer = playerList[0];
-                isHost = (firstPlayer.id && firstPlayer.id === socket.id) || 
-                         (playerList.find(p => p.id === socket.id) && playerList.indexOf(playerList.find(p => p.id === socket.id)) === 0);
-            }
-            
-            // Show/hide ready button based on host status
-            if (isHost) {
-                readySection.classList.add('hidden');
-            } else {
-                readySection.classList.remove('hidden');
-            }
-            
             updatePlayerList(playerList);
         });
-        
-        // Ready button click
-        readyBtn.addEventListener('click', () => {
-            if (!currentRoomCode) return;
-            socket.emit('toggleReady', { code: currentRoomCode });
+
+        // Set Name Form Handler
+        setNameForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const playerName = playerNameInput.value.trim();
+            
+            if (!playerName) {
+                showMessage('Please enter your name.', 'error');
+                return;
+            }
+            
+            if (!currentRoomCode) {
+                showMessage('Not in a room.', 'error');
+                return;
+            }
+            
+            socket.emit('setName', { code: currentRoomCode, playerName: playerName });
+        });
+
+        // Listen for setName success
+        socket.on('setNameSuccess', ({ playerName }) => {
+            currentPlayerName = playerName;
+            isPlayerReady = true;
+            showMessage(`Welcome, ${playerName}! You're ready.`, 'success');
+            if (nameInputSection) {
+                nameInputSection.classList.add('hidden');
+            }
+            updateStartButtonVisibility();
+        });
+
+        // Listen for setName errors
+        socket.on('setNameError', (message) => {
+            showMessage(message, 'error');
         });
 
         // Leave Lobby
@@ -555,8 +601,10 @@
                 currentRoomCode = null;
             }
 
+            currentPlayerName = null;
+            isPlayerReady = false;
             players = [];
-            updatePlayerList();
+            if (playerNameInput) playerNameInput.value = '';
             showPage('home-page');
             showMessage('You left the lobby.', 'success');
         });
@@ -567,153 +615,184 @@
                 showMessage('Not in a room.', 'error');
                 return;
             }
-            if (!isHost) {
-                showMessage('Only the host can start the game.', 'error');
+            
+            const readyCount = parseInt(readyCountSpan.textContent) || 0;
+            if (readyCount < 1) {
+                showMessage('Need at least 1 player to start.', 'error');
                 return;
             }
-            showMessage('Starting game!', 'info');
+            
+            showMessage('Starting game...', 'info');
             socket.emit('startGame', { code: currentRoomCode });
         });
 
-        // Answer buttons
-        const answerButtons = document.querySelectorAll('.answer-btn');
-        let selectedAnswer = null;
-        let hasAnswered = false;
-
-        answerButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (hasAnswered || !currentRoomCode) return;
-                
-                selectedAnswer = btn.getAttribute('data-answer');
-                hasAnswered = true;
-                
-                // Disable all buttons
-                answerButtons.forEach(b => {
-                    b.disabled = true;
-                    b.classList.add('opacity-50', 'cursor-not-allowed');
-                });
-                
-                // Highlight selected
-                btn.classList.add('bg-blue-200', 'border-blue-500');
-                
-                // Show status
-                document.getElementById('answer-status').textContent = 'Answer submitted! Waiting for others...';
-                
-                // Send answer to server
-                socket.emit('submitAnswer', { code: currentRoomCode, answer: selectedAnswer });
-            });
-        });
-
-        // Game event handlers
-        socket.on('gameStarted', ({ question, totalQuestions }) => {
+        // Game Events
+        socket.on('gameStarted', ({ question, questionNumber, totalQuestions }) => {
             showPage('game-page');
-            displayQuestion(question, totalQuestions);
+            displayQuestion(question, questionNumber, totalQuestions);
             hasAnswered = false;
-            selectedAnswer = null;
+            currentScore = 0;
+            updateScoreDisplay();
         });
 
-        socket.on('nextQuestion', ({ question, totalQuestions }) => {
-            showPage('game-page');
-            displayQuestion(question, totalQuestions);
-            hasAnswered = false;
-            selectedAnswer = null;
-        });
-
-        socket.on('showResults', ({ correctAnswer, results, questionNumber, totalQuestions }) => {
-            showPage('results-page');
-            displayResults(correctAnswer, results, questionNumber, totalQuestions);
-        });
-
-        socket.on('gameFinished', ({ scores }) => {
-            showPage('end-game-page');
-            displayFinalScores(scores);
-        });
-
-        socket.on('gameError', (message) => {
+        socket.on('startGameError', (message) => {
             showMessage(message, 'error');
         });
 
-        function displayQuestion(question, totalQuestions) {
-            document.getElementById('question-text').textContent = question.question_text;
-            document.getElementById('option-a').textContent = question.option_a;
-            document.getElementById('option-b').textContent = question.option_b;
-            document.getElementById('option-c').textContent = question.option_c;
-            document.getElementById('option-d').textContent = question.option_d;
-            document.getElementById('question-number').textContent = question.questionNumber || 1;
+        socket.on('nextQuestion', ({ question, questionNumber, totalQuestions, scores }) => {
+            displayQuestion(question, questionNumber, totalQuestions);
+            hasAnswered = false;
+            document.getElementById('answer-feedback').classList.add('hidden');
+            document.getElementById('waiting-message').classList.add('hidden');
+            updateScoreDisplay();
+        });
+
+        socket.on('gameEnded', ({ leaderboard }) => {
+            showPage('results-page');
+            displayLeaderboard(leaderboard);
+            if (isHost) {
+                document.getElementById('host-controls').classList.remove('hidden');
+            }
+        });
+
+        socket.on('answerSubmitted', ({ isCorrect, points, totalScore }) => {
+            hasAnswered = true;
+            currentScore = totalScore;
+            updateScoreDisplay();
+            
+            const feedbackDiv = document.getElementById('answer-feedback');
+            const feedbackText = document.getElementById('feedback-text');
+            const pointsEarned = document.getElementById('points-earned');
+            
+            feedbackDiv.classList.remove('hidden');
+            if (isCorrect) {
+                feedbackDiv.classList.remove('bg-red-100', 'text-red-800');
+                feedbackDiv.classList.add('bg-green-100', 'text-green-800');
+                feedbackText.textContent = 'Correct! ✓';
+                pointsEarned.textContent = `You earned ${points} points!`;
+            } else {
+                feedbackDiv.classList.remove('bg-green-100', 'text-green-800');
+                feedbackDiv.classList.add('bg-red-100', 'text-red-800');
+                feedbackText.textContent = 'Incorrect ✗';
+                pointsEarned.textContent = 'Better luck next time!';
+            }
+            
+            document.getElementById('waiting-message').classList.remove('hidden');
+        });
+
+        socket.on('submitAnswerError', (message) => {
+            showMessage(message, 'error');
+        });
+
+        socket.on('returnedToLobby', () => {
+            showPage('lobby-page');
+            currentScore = 0;
+            hasAnswered = false;
+            updateScoreDisplay();
+        });
+
+        function displayQuestion(question, questionNumber, totalQuestions) {
+            document.getElementById('question-number').textContent = questionNumber;
             document.getElementById('total-questions').textContent = totalQuestions;
-            document.getElementById('answer-status').textContent = '';
-
-            // Reset buttons
-            answerButtons.forEach(btn => {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-blue-200', 'border-blue-500', 'bg-green-200', 'bg-red-200', 'border-green-500', 'border-red-500');
+            document.getElementById('question-text').textContent = question.question;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = option;
+                button.classList.add(
+                    'w-full', 'py-3', 'px-4', 'border', 'border-gray-300', 'rounded-lg',
+                    'shadow-sm', 'text-lg', 'font-semibold', 'text-gray-800',
+                    'bg-white', 'hover:bg-blue-50', 'focus:outline-none',
+                    'focus:ring-2', 'focus:ring-blue-500', 'transition-colors'
+                );
+                button.addEventListener('click', () => {
+                    if (!hasAnswered) {
+                        submitAnswer(index);
+                    }
+                });
+                optionsContainer.appendChild(button);
             });
         }
 
-        function displayResults(correctAnswer, results, questionNumber, totalQuestions) {
-            const resultsContent = document.getElementById('results-content');
-            resultsContent.innerHTML = '';
+        function submitAnswer(answerIndex) {
+            if (!currentRoomCode || hasAnswered) {
+                return;
+            }
+            
+            socket.emit('submitAnswer', { code: currentRoomCode, answerIndex });
+        }
 
-            // Show correct answer
-            const correctOption = document.getElementById(`option-${correctAnswer.toLowerCase()}`);
-            const correctText = correctOption ? correctOption.textContent : '';
+        function updateScoreDisplay() {
+            const scoreDisplay = document.getElementById('current-score');
+            if (scoreDisplay) {
+                scoreDisplay.textContent = currentScore;
+            }
+        }
 
-            const header = document.createElement('div');
-            header.className = 'mb-4 p-4 bg-gray-100 rounded-lg';
-            header.innerHTML = `
-                <p class="text-lg font-bold text-gray-700">Correct Answer: <span class="text-green-600">${correctAnswer} - ${correctText}</span></p>
-            `;
-            resultsContent.appendChild(header);
-
-            // Show player results
-            results.forEach(result => {
-                const resultDiv = document.createElement('div');
-                resultDiv.className = `p-4 rounded-lg ${result.correct ? 'bg-green-100 border-2 border-green-500' : 'bg-red-100 border-2 border-red-500'}`;
-                resultDiv.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-lg">${result.playerName}</span>
-                        <div class="flex items-center space-x-4">
-                            <span class="${result.correct ? 'text-green-600' : 'text-red-600'} font-bold">
-                                ${result.correct ? '✓ Correct' : '✗ Wrong'} (${result.answer || 'No answer'})
-                            </span>
-                            <span class="font-black text-blue-600">Score: ${result.score}</span>
-                        </div>
-                    </div>
-                `;
-                resultsContent.appendChild(resultDiv);
+        function displayLeaderboard(leaderboard) {
+            const leaderboardDiv = document.getElementById('leaderboard');
+            leaderboardDiv.innerHTML = '';
+            
+            leaderboard.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.classList.add(
+                    'flex', 'justify-between', 'items-center', 'p-4', 'mb-2',
+                    'rounded-lg', 'border', 'border-gray-200'
+                );
+                
+                if (index === 0) {
+                    div.classList.add('bg-yellow-100', 'border-yellow-300');
+                } else if (index === 1) {
+                    div.classList.add('bg-gray-100', 'border-gray-300');
+                } else if (index === 2) {
+                    div.classList.add('bg-orange-100', 'border-orange-300');
+                } else {
+                    div.classList.add('bg-white');
+                }
+                
+                const rank = document.createElement('span');
+                rank.classList.add('text-2xl', 'font-bold', 'text-gray-600');
+                rank.textContent = `#${index + 1}`;
+                
+                const name = document.createElement('span');
+                name.classList.add('text-lg', 'font-semibold', 'text-gray-800');
+                name.textContent = player.name;
+                
+                const score = document.createElement('span');
+                score.classList.add('text-lg', 'font-bold', 'text-blue-600');
+                score.textContent = `${player.score} pts`;
+                
+                div.appendChild(rank);
+                div.appendChild(name);
+                div.appendChild(score);
+                
+                leaderboardDiv.appendChild(div);
             });
         }
 
-        function displayFinalScores(scores) {
-            const finalScoresDiv = document.getElementById('final-scores');
-            finalScoresDiv.innerHTML = '';
+        // Play Again button
+        document.getElementById('play-again-btn').addEventListener('click', () => {
+            if (!currentRoomCode) return;
+            socket.emit('returnToLobby', { code: currentRoomCode });
+        });
 
-            scores.forEach((player, index) => {
-                const scoreDiv = document.createElement('div');
-                const isWinner = index === 0;
-                scoreDiv.className = `p-4 rounded-lg ${isWinner ? 'bg-yellow-100 border-2 border-yellow-500' : 'bg-gray-100 border-2 border-gray-300'}`;
-                scoreDiv.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-2xl font-black">${index + 1}.</span>
-                            <span class="font-bold text-lg">${player.name}</span>
-                            ${isWinner ? '<span class="text-yellow-600 font-bold">👑 Winner!</span>' : ''}
-                        </div>
-                        <span class="font-black text-2xl text-blue-600">${player.score} pts</span>
-                    </div>
-                `;
-                finalScoresDiv.appendChild(scoreDiv);
-            });
-        }
-
-        // Back to home button
+        // Back to Home button
         document.getElementById('back-to-home-btn').addEventListener('click', () => {
             if (currentRoomCode) {
                 socket.emit('leaveRoom', currentRoomCode);
                 currentRoomCode = null;
             }
+            currentPlayerName = null;
+            isPlayerReady = false;
+            isHost = false;
+            currentScore = 0;
+            hasAnswered = false;
             players = [];
-            updatePlayerList();
+            if (playerNameInput) playerNameInput.value = '';
             showPage('home-page');
         });
 

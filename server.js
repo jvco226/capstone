@@ -26,15 +26,68 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
+// Trivia Questions Database
+const questions = [
+    {
+        question: "What is the capital of France?",
+        options: ["London", "Berlin", "Paris", "Madrid"],
+        correct: 2
+    },
+    {
+        question: "Which planet is known as the Red Planet?",
+        options: ["Venus", "Mars", "Jupiter", "Saturn"],
+        correct: 1
+    },
+    {
+        question: "What is 2 + 2?",
+        options: ["3", "4", "5", "6"],
+        correct: 1
+    },
+    {
+        question: "Who wrote 'Romeo and Juliet'?",
+        options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
+        correct: 1
+    },
+    {
+        question: "What is the largest ocean on Earth?",
+        options: ["Atlantic", "Indian", "Arctic", "Pacific"],
+        correct: 3
+    },
+    {
+        question: "In which year did World War II end?",
+        options: ["1943", "1944", "1945", "1946"],
+        correct: 2
+    },
+    {
+        question: "What is the chemical symbol for gold?",
+        options: ["Go", "Gd", "Au", "Ag"],
+        correct: 2
+    },
+    {
+        question: "How many continents are there?",
+        options: ["5", "6", "7", "8"],
+        correct: 2
+    },
+    {
+        question: "What is the speed of light in vacuum (approximately)?",
+        options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "600,000 km/s"],
+        correct: 0
+    },
+    {
+        question: "Which programming language is known as the 'language of the web'?",
+        options: ["Python", "Java", "JavaScript", "C++"],
+        correct: 2
+    }
+];
+
 // In-memory rooms data
 // { roomCode: { 
-//     players: [{id, name, score, ready}], 
-//     gameState: 'lobby' | 'question' | 'results' | 'finished',
-//     currentQuestion: {...},
-//     questionIndex: 0,
-//     answers: {socketId: 'A'|'B'|'C'|'D'},
-//     questions: [...],
-//     readyPlayers: Set of socketIds
+//     players: [{id, name, ready, score, isHost}], 
+//     hostId: socketId,
+//     state: 'lobby' | 'playing' | 'results',
+//     currentQuestion: number,
+//     questionStartTime: timestamp,
+//     answers: {socketId: answerIndex}
 // } }
 const rooms = {};
 
@@ -56,13 +109,11 @@ app.post('/api/create-room', (req, res) => {
 
     rooms[code] = { 
         players: [],
-        gameState: 'lobby',
-        currentQuestion: null,
-        questionIndex: 0,
-        answers: {},
-        questions: [],
-        scores: {},
-        readyPlayers: new Set()
+        hostId: null, // Will be set when host joins via socket
+        state: 'lobby',
+        currentQuestion: -1,
+        questionStartTime: null,
+        answers: {}
     };
     res.json({ ok: true, code });
 
@@ -80,46 +131,245 @@ app.post('/api/join-room', (req, res) => {
 
 // Socket.IO connection
 io.on('connection', (socket) => {
-    socket.on('joinRoom', ({ code, playerName }) => {
+    socket.on('joinRoom', ({ code }) => {
         if (!rooms[code]) {
             rooms[code] = { 
                 players: [],
-                gameState: 'lobby',
-                currentQuestion: null,
-                questionIndex: 0,
-                answers: {},
-                questions: [],
-                scores: {},
-                readyPlayers: new Set()
+                hostId: null,
+                state: 'lobby',
+                currentQuestion: -1,
+                questionStartTime: null,
+                answers: {}
             };
         }
 
-        // Check if room is full
-        if (rooms[code].players.length >= 8) {
+        const room = rooms[code];
+
+        // Don't allow joining if game is in progress
+        if (room.state === 'playing') {
+            socket.emit('joinError', 'Game is already in progress.');
+            return;
+        }
+
+        // Count only ready players (with names)
+        const readyPlayers = room.players.filter(p => p.ready).length;
+        if (readyPlayers >= 8) {
             socket.emit('joinError', 'Room is full.')
             return;
         }
 
         // Avoid duplicates
-        if (!rooms[code].players.find(p => p.id === socket.id)) {
-            rooms[code].players.push({ id: socket.id, name: playerName, score: 0, ready: false });
-            // Initialize score for this player
-            if (!rooms[code].scores) rooms[code].scores = {};
-            rooms[code].scores[socket.id] = 0;
-            if (!rooms[code].readyPlayers) rooms[code].readyPlayers = new Set();
+        if (!room.players.find(p => p.id === socket.id)) {
+            // Check if this is the first player (host)
+            const isHost = room.players.length === 0;
+            if (isHost) {
+                room.hostId = socket.id;
+            }
+            
+            // Add as pending player (no name yet)
+            room.players.push({ 
+                id: socket.id, 
+                name: null, 
+                ready: false,
+                score: 0,
+                isHost: isHost
+            });
         }
 
         socket.join(code);
 
         // Broadcast updated players list to all clients in the room
-        const playersWithReady = rooms[code].players.map(p => ({
-            ...p,
-            ready: rooms[code].readyPlayers.has(p.id)
-        }));
-        io.to(code).emit('updatePlayers', playersWithReady);
+        io.to(code).emit('updatePlayers', room.players);
 
-        // Confirm join to client
-        socket.emit('joinSuccess', { code, players: playersWithReady });
+        // Confirm join to client with host info
+        socket.emit('joinSuccess', { 
+            code, 
+            players: room.players,
+            isHost: room.players.find(p => p.id === socket.id)?.isHost || false,
+            state: room.state
+        });
+    });
+
+    socket.on('setName', ({ code, playerName }) => {
+        const room = rooms[code];
+        if (!room) {
+            socket.emit('setNameError', 'Room not found.');
+            return;
+        }
+
+        const player = room.players.find(p => p.id === socket.id);
+        if (!player) {
+            socket.emit('setNameError', 'Player not found in room.');
+            return;
+        }
+
+        // Set the player's name and mark as ready
+        player.name = playerName;
+        player.ready = true;
+
+        // Broadcast updated players list to all clients in the room
+        io.to(code).emit('updatePlayers', room.players);
+        socket.emit('setNameSuccess', { playerName });
+    });
+
+    socket.on('startGame', ({ code }) => {
+        const room = rooms[code];
+        if (!room) {
+            socket.emit('startGameError', 'Room not found.');
+            return;
+        }
+
+        // Check if requester is the host
+        if (room.hostId !== socket.id) {
+            socket.emit('startGameError', 'Only the host can start the game.');
+            return;
+        }
+
+        // Check if game is already started
+        if (room.state !== 'lobby') {
+            socket.emit('startGameError', 'Game already started.');
+            return;
+        }
+
+        // Validate minimum players and all ready (allow 1 player for testing)
+        const readyPlayers = room.players.filter(p => p.ready && p.name);
+        if (readyPlayers.length < 1) {
+            socket.emit('startGameError', 'Need at least 1 player to start.');
+            return;
+        }
+
+        // Reset scores and start game
+        room.players.forEach(p => {
+            p.score = 0;
+        });
+        room.state = 'playing';
+        room.currentQuestion = 0;
+        room.answers = {};
+
+        // Shuffle questions and select first 5
+        const shuffledQuestions = [...questions].sort(() => Math.random() - 0.5).slice(0, 5);
+        room.questions = shuffledQuestions;
+
+        // Start first question
+        const question = room.questions[0];
+        room.questionStartTime = Date.now();
+        room.answers = {};
+
+        // Broadcast game start to all players
+        io.to(code).emit('gameStarted', {
+            question: question,
+            questionNumber: 1,
+            totalQuestions: room.questions.length
+        });
+    });
+
+    socket.on('submitAnswer', ({ code, answerIndex }) => {
+        const room = rooms[code];
+        if (!room) {
+            socket.emit('submitAnswerError', 'Room not found.');
+            return;
+        }
+
+        if (room.state !== 'playing') {
+            socket.emit('submitAnswerError', 'Game is not in progress.');
+            return;
+        }
+
+        const player = room.players.find(p => p.id === socket.id);
+        if (!player) {
+            socket.emit('submitAnswerError', 'Player not found.');
+            return;
+        }
+
+        // Check if already answered
+        if (room.answers[socket.id] !== undefined) {
+            socket.emit('submitAnswerError', 'You already answered this question.');
+            return;
+        }
+
+        // Record answer
+        room.answers[socket.id] = answerIndex;
+        const currentQ = room.questions[room.currentQuestion];
+        const isCorrect = answerIndex === currentQ.correct;
+
+        // Calculate score based on time (faster = more points, max 1000 points per question)
+        const timeElapsed = Date.now() - room.questionStartTime;
+        const maxTime = 30000; // 30 seconds
+        const timeBonus = Math.max(0, Math.floor((maxTime - timeElapsed) / maxTime * 500));
+        const baseScore = isCorrect ? 500 : 0;
+        const points = baseScore + timeBonus;
+
+        if (isCorrect) {
+            player.score += points;
+        }
+
+        // Confirm answer received
+        socket.emit('answerSubmitted', { isCorrect, points, totalScore: player.score });
+
+        // Check if all players answered
+        const readyPlayers = room.players.filter(p => p.ready && p.name);
+        if (Object.keys(room.answers).length === readyPlayers.length) {
+            // All players answered, move to next question after a delay
+            setTimeout(() => {
+                nextQuestion(room, code);
+            }, 3000);
+        }
+    });
+
+    function nextQuestion(room, code) {
+        room.currentQuestion++;
+        
+        if (room.currentQuestion >= room.questions.length) {
+            // Game over, show results
+            endGame(room, code);
+        } else {
+            // Next question
+            room.questionStartTime = Date.now();
+            room.answers = {};
+            const question = room.questions[room.currentQuestion];
+            
+            io.to(code).emit('nextQuestion', {
+                question: question,
+                questionNumber: room.currentQuestion + 1,
+                totalQuestions: room.questions.length,
+                scores: room.players.map(p => ({ name: p.name, score: p.score }))
+            });
+        }
+    }
+
+    function endGame(room, code) {
+        room.state = 'results';
+        
+        // Sort players by score
+        const leaderboard = room.players
+            .filter(p => p.ready && p.name)
+            .map(p => ({ name: p.name, score: p.score }))
+            .sort((a, b) => b.score - a.score);
+
+        io.to(code).emit('gameEnded', { leaderboard });
+    }
+
+    socket.on('returnToLobby', ({ code }) => {
+        const room = rooms[code];
+        if (!room) {
+            return;
+        }
+
+        // Only host can return to lobby
+        if (room.hostId !== socket.id) {
+            return;
+        }
+
+        // Reset game state
+        room.state = 'lobby';
+        room.currentQuestion = -1;
+        room.questionStartTime = null;
+        room.answers = {};
+        room.players.forEach(p => {
+            p.score = 0;
+        });
+
+        io.to(code).emit('returnedToLobby');
     });
 
     socket.on('leaveRoom', (code) => {
@@ -128,20 +378,18 @@ io.on('connection', (socket) => {
             const index = room.players.findIndex(p => p.id === socket.id);
             
             if (index !== -1) {
+                const wasHost = room.hostId === socket.id;
                 room.players.splice(index, 1);
                 
                 socket.leave(code);
 
-                // Remove from ready players
-                if (room.readyPlayers) {
-                    room.readyPlayers.delete(socket.id);
+                // If host left and there are still players, assign new host
+                if (wasHost && room.players.length > 0) {
+                    room.hostId = room.players[0].id;
+                    room.players[0].isHost = true;
                 }
 
-                const playersWithReady = room.players.map(p => ({
-                    ...p,
-                    ready: room.readyPlayers.has(p.id)
-                }));
-                io.to(code).emit('updatePlayers', playersWithReady);
+                io.to(code).emit('updatePlayers', room.players);
 
                 if (room.players.length === 0) {
                     delete rooms[code];
@@ -158,20 +406,18 @@ io.on('connection', (socket) => {
             const index = room.players.findIndex(p => p.id === socket.id);
 
             if (index !== -1) {
+                const wasHost = room.hostId === socket.id;
                 // Remove the player
                 room.players.splice(index, 1);
 
-                // Remove from ready players
-                if (room.readyPlayers) {
-                    room.readyPlayers.delete(socket.id);
+                // If host disconnected and there are still players, assign new host
+                if (wasHost && room.players.length > 0) {
+                    room.hostId = room.players[0].id;
+                    room.players[0].isHost = true;
                 }
 
                 // Update all remaining clients in the room
-                const playersWithReady = room.players.map(p => ({
-                    ...p,
-                    ready: room.readyPlayers.has(p.id)
-                }));
-                io.to(code).emit('updatePlayers', playersWithReady);
+                io.to(code).emit('updatePlayers', room.players);
 
                 // If no players left, delete the room entirely
                 if (room.players.length === 0) {
@@ -183,204 +429,6 @@ io.on('connection', (socket) => {
             }
         }
     });
-
-    // Toggle ready status
-    socket.on('toggleReady', ({ code }) => {
-        const room = rooms[code];
-        if (!room || room.gameState !== 'lobby') {
-            return;
-        }
-
-        const player = room.players.find(p => p.id === socket.id);
-        if (!player) return;
-
-        if (!room.readyPlayers) room.readyPlayers = new Set();
-
-        if (room.readyPlayers.has(socket.id)) {
-            room.readyPlayers.delete(socket.id);
-            player.ready = false;
-        } else {
-            room.readyPlayers.add(socket.id);
-            player.ready = true;
-        }
-
-        // Broadcast updated players list
-        const playersWithReady = room.players.map(p => ({
-            ...p,
-            ready: room.readyPlayers.has(p.id)
-        }));
-        io.to(code).emit('updatePlayers', playersWithReady);
-    });
-
-    // Start game event
-    socket.on('startGame', async ({ code }) => {
-        const room = rooms[code];
-        if (!room || room.gameState !== 'lobby') {
-            socket.emit('gameError', 'Cannot start game.');
-            return;
-        }
-
-        // Only host can start (first player)
-        const isHost = room.players[0] && room.players[0].id === socket.id;
-        if (!isHost) {
-            socket.emit('gameError', 'Only the host can start the game.');
-            return;
-        }
-
-        // Check if all players are ready (excluding host - host doesn't need to be ready)
-        const nonHostPlayers = room.players.slice(1);
-        if (nonHostPlayers.length > 0) {
-            const allReady = nonHostPlayers.every(p => room.readyPlayers && room.readyPlayers.has(p.id));
-            if (!allReady) {
-                socket.emit('gameError', 'All players must be ready before starting the game.');
-                return;
-            }
-        }
-
-        try {
-            // Fetch questions from database
-            const result = await pool.query(
-                'SELECT id, question_text, option_a, option_b, option_c, option_d, correct_answer, category FROM questions ORDER BY RANDOM() LIMIT 10'
-            );
-            
-            if (result.rows.length === 0) {
-                socket.emit('gameError', 'No questions available.');
-                return;
-            }
-
-            room.questions = result.rows;
-            room.questionIndex = 0;
-            room.gameState = 'question';
-            room.answers = {};
-            room.scores = {};
-            room.players.forEach(p => room.scores[p.id] = 0);
-
-            // Start with first question
-            room.currentQuestion = room.questions[0];
-            room.currentQuestion.questionNumber = 1;
-            room.currentQuestion.totalQuestions = room.questions.length;
-
-            io.to(code).emit('gameStarted', {
-                question: room.currentQuestion,
-                totalQuestions: room.questions.length
-            });
-
-            console.log(`Game started in room ${code}`);
-        } catch (err) {
-            console.error('Error starting game:', err);
-            socket.emit('gameError', 'Failed to start game.');
-        }
-    });
-
-    // Submit answer event
-    socket.on('submitAnswer', ({ code, answer }) => {
-        const room = rooms[code];
-        if (!room || room.gameState !== 'question') {
-            return;
-        }
-
-        // Check if player already answered
-        if (room.answers[socket.id]) {
-            return; // Already answered
-        }
-
-        // Store answer
-        room.answers[socket.id] = answer;
-        
-        // Check if all players answered
-        const allAnswered = room.players.every(p => room.answers[p.id]);
-        
-        if (allAnswered) {
-            // Wait a bit then show results
-            setTimeout(() => {
-                showResults(code);
-            }, 1000);
-        }
-    });
-
-    // Function to show results
-    function showResults(code) {
-        const room = rooms[code];
-        if (!room || !room.currentQuestion) return;
-
-        const correctAnswer = room.currentQuestion.correct_answer;
-        const results = room.players.map(player => {
-            const answer = room.answers[player.id];
-            const isCorrect = answer === correctAnswer;
-            
-            if (isCorrect) {
-                room.scores[player.id] = (room.scores[player.id] || 0) + 1;
-                player.score = room.scores[player.id];
-            }
-
-            return {
-                playerId: player.id,
-                playerName: player.name,
-                answer: answer,
-                correct: isCorrect,
-                score: room.scores[player.id] || 0
-            };
-        });
-
-        room.gameState = 'results';
-        
-        io.to(code).emit('showResults', {
-            correctAnswer: correctAnswer,
-            results: results,
-            questionNumber: room.questionIndex + 1,
-            totalQuestions: room.questions.length
-        });
-
-        // Move to next question after 5 seconds
-        setTimeout(() => {
-            nextQuestion(code);
-        }, 5000);
-    }
-
-    // Function to move to next question
-    function nextQuestion(code) {
-        const room = rooms[code];
-        if (!room) return;
-
-        room.questionIndex++;
-        
-        if (room.questionIndex >= room.questions.length) {
-            // Game finished
-            endGame(code);
-            return;
-        }
-
-        room.currentQuestion = room.questions[room.questionIndex];
-        room.currentQuestion.questionNumber = room.questionIndex + 1;
-        room.currentQuestion.totalQuestions = room.questions.length;
-        room.answers = {};
-        room.gameState = 'question';
-
-        io.to(code).emit('nextQuestion', {
-            question: room.currentQuestion,
-            totalQuestions: room.questions.length
-        });
-    }
-
-    // Function to end game
-    function endGame(code) {
-        const room = rooms[code];
-        if (!room) return;
-
-        room.gameState = 'finished';
-        
-        // Get final scores
-        const finalScores = room.players.map(player => ({
-            name: player.name,
-            score: room.scores[player.id] || 0
-        })).sort((a, b) => b.score - a.score);
-
-        io.to(code).emit('gameFinished', {
-            scores: finalScores
-        });
-
-        console.log(`Game finished in room ${code}`);
-    }
 });
 
 // Serve index.html for all other routes
@@ -449,17 +497,6 @@ app.post('/api/register', async (req, res) => {
         res.json({ ok: true, user: result.rows[0] });
     } catch (err) {
         console.error('Database error on register:', err);
-        res.status(500).json({ error: 'Database error' });
-    }
-});
-
-// API to get questions (optional, for admin/managing questions)
-app.get('/api/questions', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, question_text, option_a, option_b, option_c, option_d, correct_answer, category, difficulty FROM questions');
-        res.json({ ok: true, questions: result.rows });
-    } catch (err) {
-        console.error('Database error fetching questions:', err);
         res.status(500).json({ error: 'Database error' });
     }
 });
