@@ -80,7 +80,7 @@ This repo currently includes:
    docker-compose up -d
    # Then connect and run the SQL file
    ```
-   **Verify Database Connection (Optional):** To ensure your .env file is correct and the database is reachable, run the verification script:
+   **Verify Database Connection:** To ensure your .env file is correct and the database is reachable, run the verification script:
    ```bash
    npm run verify-db
    ```
